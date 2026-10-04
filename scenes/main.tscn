@@ -1,0 +1,99 @@
+[gd_scene load_steps=7 format=3 uid="uid://bmain000001"]
+
+[ext_resource type="Script" path="res://scripts/main.gd" id="1_main"]
+[ext_resource type="PackedScene" uid="uid://bplayer00001" path="res://scenes/player.tscn" id="2_player"]
+[ext_resource type="PackedScene" uid="uid://bball000001" path="res://scenes/ball.tscn" id="3_ball"]
+
+[sub_resource type="WorldBoundaryShape2D" id="WB_top"]
+normal = Vector2(0, 1)
+
+[sub_resource type="RectangleShape2D" id="Rect_wall_h"]
+size = Vector2(1280, 40)
+
+[sub_resource type="RectangleShape2D" id="Rect_goal"]
+size = Vector2(40, 200)
+
+[node name="Main" type="Node2D"]
+script = ExtResource("1_main")
+
+[node name="Pitch" type="Polygon2D" parent="."]
+color = Color(0.17, 0.45, 0.2, 1)
+polygon = PackedVector2Array(0, 0, 1280, 0, 1280, 720, 0, 720)
+
+[node name="CenterLine" type="Line2D" parent="Pitch"]
+width = 4.0
+default_color = Color(1, 1, 1, 0.35)
+points = PackedVector2Array(640, 0, 640, 720)
+
+[node name="Walls" type="StaticBody2D" parent="."]
+collision_layer = 1
+collision_mask = 0
+
+[node name="Top" type="CollisionShape2D" parent="Walls"]
+position = Vector2(640, -20)
+shape = SubResource("Rect_wall_h")
+
+[node name="Bottom" type="CollisionShape2D" parent="Walls"]
+position = Vector2(640, 740)
+shape = SubResource("Rect_wall_h")
+
+[node name="Left" type="CollisionShape2D" parent="Walls"]
+position = Vector2(-20, 360)
+rotation = 1.5707963
+shape = SubResource("Rect_wall_h")
+
+[node name="Right" type="CollisionShape2D" parent="Walls"]
+position = Vector2(1300, 360)
+rotation = 1.5707963
+shape = SubResource("Rect_wall_h")
+
+[node name="Goals" type="Node2D" parent="."]
+
+[node name="GoalLeft" type="Area2D" parent="Goals"]
+position = Vector2(20, 360)
+collision_layer = 0
+collision_mask = 4
+
+[node name="Collision" type="CollisionShape2D" parent="Goals/GoalLeft"]
+shape = SubResource("Rect_goal")
+
+[node name="Mouth" type="Polygon2D" parent="Goals/GoalLeft"]
+color = Color(1, 1, 1, 0.18)
+polygon = PackedVector2Array(-20, -100, 20, -100, 20, 100, -20, 100)
+
+[node name="GoalRight" type="Area2D" parent="Goals"]
+position = Vector2(1260, 360)
+collision_layer = 0
+collision_mask = 4
+
+[node name="Collision" type="CollisionShape2D" parent="Goals/GoalRight"]
+shape = SubResource("Rect_goal")
+
+[node name="Mouth" type="Polygon2D" parent="Goals/GoalRight"]
+color = Color(1, 1, 1, 0.18)
+polygon = PackedVector2Array(-20, -100, 20, -100, 20, 100, -20, 100)
+
+[node name="Player" parent="." instance=ExtResource("2_player")]
+position = Vector2(400, 360)
+
+[node name="Ball" parent="." instance=ExtResource("3_ball")]
+position = Vector2(640, 360)
+
+[node name="UI" type="CanvasLayer" parent="."]
+
+[node name="ScoreLabel" type="Label" parent="UI"]
+offset_left = 540.0
+offset_top = 24.0
+offset_right = 740.0
+offset_bottom = 72.0
+theme_override_font_sizes/font_size = 36
+text = "0  –  0"
+horizontal_alignment = 1
+
+[node name="Hint" type="Label" parent="UI"]
+offset_left = 24.0
+offset_top = 672.0
+offset_right = 500.0
+offset_bottom = 700.0
+theme_override_colors/font_color = Color(1, 1, 1, 0.6)
+text = "WASD / Arrows to move  ·  Space to kick"

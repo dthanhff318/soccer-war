@@ -102,7 +102,7 @@ func _start_match() -> void:
 		_inputs[id] = InputQueue.new()
 	_kickoff()
 	phase = Protocol.Phase.PLAYING
-	for id in roster.ids():
+	for id in Net.open_peers(roster.ids()):
 		Net.send_match_start.rpc_id(id)
 	_broadcast_room_state()
 	print("[server] room %s: match started with %d players" % [code, roster.size()])
@@ -151,7 +151,7 @@ func _update_phase(delta: float) -> void:
 			score[scorer] += 1
 			phase = Protocol.Phase.CELEBRATING
 			_phase_timer = MatchRules.CELEBRATION_SECONDS
-			for id in roster.ids():
+			for id in Net.open_peers(roster.ids()):
 				Net.send_goal.rpc_id(id, scorer)
 	elif phase == Protocol.Phase.CELEBRATING:
 		_phase_timer -= delta
@@ -161,7 +161,7 @@ func _update_phase(delta: float) -> void:
 	if time_left <= 0.0:
 		phase = Protocol.Phase.ENDED
 		_phase_timer = MatchRules.RESULT_SECONDS
-		for id in roster.ids():
+		for id in Net.open_peers(roster.ids()):
 			Net.send_match_end.rpc_id(id, score[Roster.Team.LEFT], score[Roster.Team.RIGHT])
 
 
@@ -180,7 +180,7 @@ func _broadcast_room_state() -> void:
 	var state := roster.to_dict()
 	state.code = code
 	state.phase = phase
-	for id in roster.ids():
+	for id in Net.open_peers(roster.ids()):
 		Net.send_room_state.rpc_id(id, state)
 
 
@@ -200,5 +200,5 @@ func _broadcast_snapshot() -> void:
 		"ball_vel": _ball.velocity,
 		"players": players,
 	})
-	for id in roster.ids():
+	for id in Net.open_peers(roster.ids()):
 		Net.send_snapshot.rpc_id(id, bytes)

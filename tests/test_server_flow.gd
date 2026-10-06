@@ -166,3 +166,20 @@ func test_team_switch_in_lobby() -> void:
 	host.request_team.rpc_id(1, Roster.Team.RIGHT)
 	check(await wait_until(func(): return host.current_room.players[0].team == Roster.Team.RIGHT), "switched")
 	await _teardown()
+
+
+func test_simultaneous_disconnects_send_nothing_to_closed_sockets() -> void:
+	_start_server()
+	var host := _make_client("ClientA")
+	var guest := _make_client("ClientB")
+	check(await wait_until(func(): return host.is_online() and guest.is_online()), "connect")
+	host.request_create.rpc_id(1, "Alice")
+	check(await wait_until(func(): return host.current_room.has("code")), "room")
+	guest.request_join.rpc_id(1, host.current_room.code, "Bob")
+	check(await wait_until(func(): return host.current_room.get("players", []).size() == 2), "joined")
+	# Both sockets close in the same frame; the runner fails the test if the
+	# server logs an error while sending to the already-closed one.
+	host.leave()
+	guest.leave()
+	check(await wait_until(func(): return _server.room_count() == 0), "room deleted")
+	await _teardown()

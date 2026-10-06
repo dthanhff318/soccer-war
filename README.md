@@ -1,24 +1,27 @@
 # Soccer War
 
-A 2D top-down soccer game built with **Godot 4.3**, targeting **HTML5 / web** export.
+A 2D top-down soccer game built with **Godot 4.7**, targeting **HTML5 / web** export.
+Play offline, or online with friends: 3v3 up to 4v4, joined by room code, 5-minute matches.
 
 ## Requirements
 
-- [Godot 4.3+](https://godotengine.org/download) (standard build, not .NET)
+- [Godot 4.7.2](https://godotengine.org/download) (standard build, not .NET), on your `PATH` as `godot`
 - Web export templates — in the editor: **Editor → Manage Export Templates → Download and Install**
 - Python 3 (only for the local web server script)
 
 ## Running in the editor
 
 1. Open Godot, choose **Import**, and select this folder's `project.godot`.
-2. Press **F5** to run. `scenes/main.tscn` is the main scene.
+2. Press **F5** to run. `scenes/boot.tscn` opens the menu.
 
 ## Controls
 
 | Action | Keys |
 |--------|------|
 | Move   | `WASD` or arrow keys |
+| Sprint | `Shift` |
 | Kick   | `Space` |
+| Menu   | `Esc` |
 
 ## Exporting for web
 
@@ -45,24 +48,88 @@ python3 serve.py 9000     # custom port
 If you deploy elsewhere, that host must send the same two headers, or disable
 `variant/thread_support` in the export preset.
 
+## Online multiplayer
+
+The server is the same Godot project run headless. It owns the whole simulation
+(players, ball, goals, clock); browsers only send key presses and draw what the
+server sends back.
+
+```
+Browser (Vercel) ──wss──▶ Game server (Render, headless Godot)
+```
+
+### Play online locally
+
+```bash
+godot --headless -- --server   # game server on ws://127.0.0.1:9080 (or $PORT)
+tools/build-web.sh             # export the web build
+python3 serve.py               # http://127.0.0.1:8060
+```
+
+Open several tabs: one clicks **Create room** and shares the 4-letter code, the
+others **Join** with it, pick a team, and the host presses **Start match**.
+
+A page can target another server with `?server=wss://host.example.com`.
+
+### Latency
+
+- The local player is predicted: it moves the moment a key is pressed and is
+  corrected smoothly when the server disagrees.
+- Other players and the ball are drawn ~66 ms behind the newest server snapshot,
+  interpolated, so they move smoothly.
+- The server simulates at 60 Hz and sends 30 binary snapshots per second.
+
+### Deploy
+
+**Game server → Render** (Docker, free plan, Singapore):
+1. Push the repo to GitHub and create a Render *Blueprint* from it (`render.yaml`),
+   or a Web Service with runtime *Docker*.
+2. Copy the service URL, e.g. `soccer-war-server.onrender.com`, and set
+   `PRODUCTION_URL` in `scripts/net/protocol.gd` to `wss://soccer-war-server.onrender.com`.
+
+The free plan sleeps after 15 idle minutes; the first player then waits about a minute.
+
+**Web client → Vercel:**
+```bash
+tools/build-web.sh
+vercel deploy export --prod
+```
+`web/vercel.json` (copied into `export/`) adds the COOP/COEP headers the threaded
+web build needs.
+
+## Testing
+
+```bash
+tools/test.sh          # unit + in-process WebSocket server tests (headless)
+tools/test.sh roster   # only suites whose file name contains "roster"
+tools/e2e.sh           # real server + two bots through menu, lobby and a match
+```
+
 ## Project structure
 
 ```
 soccer-war/
-├── project.godot          # engine config: gl_compatibility renderer, input map, zero gravity
+├── project.godot          # gl_compatibility renderer, input map, autoload Net
 ├── export_presets.cfg     # Web export preset → export/index.html
-├── serve.py               # local server with COOP/COEP headers
-├── icon.svg
+├── serve.py               # local static server with COOP/COEP headers
+├── Dockerfile, render.yaml  # game server image for Render
+├── web/vercel.json        # Vercel headers for the web build
 ├── scenes/
-│   ├── main.tscn          # pitch, walls, goals, score UI
-│   ├── player.tscn
-│   └── ball.tscn
+│   ├── boot.tscn          # --server → server.tscn, else menu.tscn
+│   ├── menu.tscn, lobby.tscn
+│   ├── main.tscn          # match: field, pitch, players, ball, HUD
+│   ├── pitch.tscn         # walls and goal nets (collision only)
+│   ├── server.tscn        # dedicated server root
+│   ├── player.tscn, ball.tscn
 ├── scripts/
-│   ├── main.gd            # score tracking, goal detection, ball reset
-│   ├── player.gd          # top-down movement + kicking
-│   └── ball.gd            # linear drag, wall bounce
-├── assets/                # sprites, audio (empty for now)
-└── export/                # build output (gitignored)
+│   ├── main.gd            # match scene: offline play, online prediction/interpolation
+│   ├── player.gd, ball.gd
+│   ├── game/              # roster (teams, host), match_rules (goals, kickoff, clock)
+│   ├── net/               # Net autoload, protocol, snapshot buffer, input queue, predictor
+│   ├── server/            # game_server (rooms by code), room (one match world)
+│   └── ui/                # menu, lobby
+├── tests/                 # headless test suites + runner
+└── tools/                 # test.sh, e2e.sh, build-web.sh
 ```
 
 ## Implementation notes
@@ -73,8 +140,8 @@ soccer-war/
 - **The ball is a `CharacterBody2D`, not a `RigidBody2D`,** so motion stays deterministic
   and easy to tune for arcade feel. Drag and bounce are hand-rolled in `ball.gd`.
 - **Collision layers:** `1` = walls, `2` = player, `4` = ball.
-- Placeholder art is `Polygon2D` rectangles, so the project runs with no image assets.
+- Each server room is a `SubViewport` with its own `World2D`, so rooms never share physics.
 
 ## Not yet implemented
 
-Opponent AI, a second player, match timer, kickoff/reset flow, sound, and real art.
+Bots, matchmaking, accounts, chat, ball prediction, and sound.

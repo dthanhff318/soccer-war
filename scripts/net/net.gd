@@ -84,6 +84,21 @@ func is_online() -> bool:
 		and peer.get_connection_status() == MultiplayerPeer.CONNECTION_CONNECTED
 
 
+## The ids in `ids` whose socket is still open. A peer whose connection is
+## closing stays in the roster until its disconnect is processed; sending to
+## it in that window only logs errors.
+func open_peers(ids: Array[int]) -> Array[int]:
+	var result: Array[int] = []
+	var peer := multiplayer.multiplayer_peer as WebSocketMultiplayerPeer
+	if peer == null:
+		return result
+	var connected := multiplayer.get_peers()
+	for id in ids:
+		if connected.has(id) and peer.get_peer(id).get_ready_state() == WebSocketPeer.STATE_OPEN:
+			result.append(id)
+	return result
+
+
 func my_id() -> int:
 	return multiplayer.get_unique_id()
 

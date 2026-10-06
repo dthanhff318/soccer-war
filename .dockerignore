@@ -1,0 +1,11 @@
+.git
+.godot
+.superpowers
+export
+docs
+tests
+tools
+web
+# The server never draws the pitch; skip the 10000px texture.
+assets/field/field.png
+*.md

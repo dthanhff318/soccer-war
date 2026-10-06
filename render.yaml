@@ -1,0 +1,8 @@
+# Render Blueprint for the game server. Free plan sleeps after 15 min idle.
+services:
+  - type: web
+    name: soccer-war-server
+    runtime: docker
+    plan: free
+    region: singapore
+    dockerfilePath: ./Dockerfile

@@ -10,6 +10,8 @@ extends Node2D
 const PLAYER_SCENE := preload("res://scenes/player.tscn")
 const MENU_SCENE := "res://scenes/menu.tscn"
 const LOBBY_SCENE := "res://scenes/lobby.tscn"
+## Offline practice: stationary blue teammates to pass to.
+const OFFLINE_TEAMMATE_SPOTS: Array[Vector2] = [Vector2(520, 220), Vector2(520, 500), Vector2(800, 360)]
 
 var score: Array[int] = [0, 0]
 
@@ -45,7 +47,14 @@ func _ready() -> void:
 func _setup_offline() -> void:
 	_local = $Player
 	_local.keyboard_control = true
+	_local.is_local = true
 	_local.stamina_changed.connect(_stamina_bar.set_stamina)
+	for i in OFFLINE_TEAMMATE_SPOTS.size():
+		var mate: Player = PLAYER_SCENE.instantiate()
+		mate.team = Roster.Team.LEFT
+		mate.display_name = "Mate %d" % (i + 1)
+		mate.position = OFFLINE_TEAMMATE_SPOTS[i]
+		add_child(mate)
 
 
 func _setup_online() -> void:

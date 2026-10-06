@@ -1,0 +1,119 @@
+extends Control
+
+## Title screen: enter a name, then create a room, join one by code, or play
+## offline. Connects to the server on demand and sends the request once the
+## connection is up.
+
+const LOBBY_SCENE := "res://scenes/lobby.tscn"
+const MATCH_SCENE := "res://scenes/main.tscn"
+
+var _name_edit: LineEdit
+var _code_edit: LineEdit
+var _status: Label
+var _buttons: Array[Button] = []
+## Request to send as soon as the connection opens.
+var _pending_request: Callable
+var _leaving: bool = false
+
+
+func _ready() -> void:
+	_build_ui()
+	_name_edit.text = Net.player_name
+	_status.text = Net.last_error
+	Net.last_error = ""
+	Net.connected.connect(_on_connected)
+	Net.connection_failed.connect(_on_connection_failed)
+	Net.room_state_received.connect(_on_room_state)
+	Net.error_received.connect(_on_error)
+
+
+func _build_ui() -> void:
+	var column := UiKit.screen(self, 380)
+	column.add_child(UiKit.label("SOCCER WAR", 48, true))
+	_name_edit = UiKit.line_edit("Your name", Roster.MAX_NAME_LENGTH)
+	column.add_child(_name_edit)
+	_buttons.append(UiKit.button("Create room", _on_create_pressed))
+	column.add_child(_buttons.back())
+
+	var join_row := HBoxContainer.new()
+	_code_edit = UiKit.line_edit("Room code", Protocol.CODE_LENGTH)
+	_code_edit.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	_code_edit.text_submitted.connect(func(_text: String) -> void: _on_join_pressed())
+	join_row.add_child(_code_edit)
+	_buttons.append(UiKit.button("Join", _on_join_pressed))
+	join_row.add_child(_buttons.back())
+	column.add_child(join_row)
+
+	_buttons.append(UiKit.button("Play offline", _on_offline_pressed))
+	column.add_child(_buttons.back())
+	_status = UiKit.label("", 14)
+	column.add_child(_status)
+
+
+func _on_create_pressed() -> void:
+	var player_name := _remember_name()
+	_send(func() -> void: Net.request_create.rpc_id(1, player_name))
+
+
+func _on_join_pressed() -> void:
+	var code := _code_edit.text.strip_edges().to_upper()
+	if code.length() != Protocol.CODE_LENGTH:
+		_status.text = "Enter the %d-character room code" % Protocol.CODE_LENGTH
+		return
+	var player_name := _remember_name()
+	_send(func() -> void: Net.request_join.rpc_id(1, code, player_name))
+
+
+func _on_offline_pressed() -> void:
+	Net.leave()
+	_change_scene(MATCH_SCENE)
+
+
+func _remember_name() -> String:
+	Net.player_name = Roster.clean_name(_name_edit.text)
+	return Net.player_name
+
+
+## Sends `request` now if connected, otherwise connects first.
+func _send(request: Callable) -> void:
+	_set_busy(true)
+	if Net.is_online():
+		request.call()
+		return
+	_pending_request = request
+	_status.text = "Connecting…"
+	if Net.join(Net.server_url()) != OK:
+		_on_connection_failed()
+
+
+func _on_connected() -> void:
+	if _pending_request.is_valid():
+		_pending_request.call()
+		_pending_request = Callable()
+
+
+func _on_connection_failed() -> void:
+	_pending_request = Callable()
+	_set_busy(false)
+	_status.text = "Could not reach the server at %s" % Net.server_url()
+
+
+func _on_room_state(_state: Dictionary) -> void:
+	_change_scene(LOBBY_SCENE)
+
+
+func _on_error(message: String) -> void:
+	_set_busy(false)
+	_status.text = message
+
+
+func _set_busy(busy: bool) -> void:
+	for button in _buttons:
+		button.disabled = busy
+
+
+func _change_scene(path: String) -> void:
+	if _leaving:
+		return
+	_leaving = true
+	get_tree().change_scene_to_file(path)

@@ -6,6 +6,7 @@
 # Export output
 /export/*
 !/export/.gitkeep
+!/export/.gdignore
 
 # OS / editor
 .DS_Store

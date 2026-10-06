@@ -5,6 +5,9 @@ extends Node
 
 ## Port to listen on; 0 reads $PORT, falling back to Protocol.DEFAULT_PORT.
 @export var port: int = 0
+## Clients ping every second; one silent this long (frozen tab, dead mobile
+## connection) is dropped so its player doesn't linger in the match.
+@export var idle_timeout: float = 15.0
 
 var _rooms: Dictionary = {}         # code -> Room
 var _room_of_peer: Dictionary = {}  # peer id -> code
@@ -23,6 +26,12 @@ func _ready() -> void:
 		get_tree().quit(1)
 		return
 	print("[server] listening on port %d" % listen_port)
+
+
+func _process(_delta: float) -> void:
+	for id in Net.silent_peers(idle_timeout):
+		print("[server] dropping silent peer %d" % id)
+		Net.drop_peer(id)
 
 
 func room_count() -> int:

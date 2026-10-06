@@ -138,8 +138,7 @@ func _physics_process(delta: float) -> void:
 ## Players move first (they may push or kick the ball), then the ball.
 func _simulate(delta: float) -> void:
 	for id in _players:
-		for bits in _inputs[id].take():
-			_players[id].simulate(bits, delta)
+		_players[id].simulate(_inputs[id].take(), delta)
 	_ball.step(delta)
 
 

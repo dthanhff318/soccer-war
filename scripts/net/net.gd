@@ -29,12 +29,15 @@ var player_name: String = ""
 ## Round-trip time to the server, measured once per PING_INTERVAL.
 var ping_ms: int = 0
 var _ping_elapsed: float = 0.0
+## Server only: peer id -> Time.get_ticks_msec() of the last RPC received.
+var _last_heard: Dictionary = {}
 
 
 func _ready() -> void:
 	multiplayer.connected_to_server.connect(_on_connected_to_server)
 	multiplayer.connection_failed.connect(_on_connection_failed)
 	multiplayer.server_disconnected.connect(_on_server_disconnected)
+	multiplayer.peer_connected.connect(_on_peer_connected)
 	multiplayer.peer_disconnected.connect(_on_peer_disconnected)
 
 
@@ -73,6 +76,7 @@ func join(url: String) -> Error:
 ## Closes the connection on purpose; `disconnected` is not emitted.
 func leave() -> void:
 	current_room = {}
+	_last_heard.clear()
 	if multiplayer.multiplayer_peer is WebSocketMultiplayerPeer:
 		multiplayer.multiplayer_peer.close()
 	multiplayer.multiplayer_peer = OfflineMultiplayerPeer.new()
@@ -99,6 +103,23 @@ func open_peers(ids: Array[int]) -> Array[int]:
 	return result
 
 
+## Server only: peers that sent nothing (not even a ping) for `seconds`.
+func silent_peers(seconds: float) -> Array[int]:
+	var cutoff := Time.get_ticks_msec() - int(seconds * 1000.0)
+	var result: Array[int] = []
+	for id in _last_heard:
+		if _last_heard[id] < cutoff:
+			result.append(id)
+	return result
+
+
+## Server only: closes a client's connection; peer_disconnected follows.
+func drop_peer(id: int) -> void:
+	_last_heard.erase(id)
+	if multiplayer.get_peers().has(id):
+		(multiplayer.multiplayer_peer as WebSocketMultiplayerPeer).disconnect_peer(id)
+
+
 func my_id() -> int:
 	return multiplayer.get_unique_id()
 
@@ -120,8 +141,12 @@ func server_url() -> String:
 	return Protocol.LOCAL_URL
 
 
+## Id of the peer whose RPC is running; also records that it is alive.
 func _sender() -> int:
-	return multiplayer.get_remote_sender_id()
+	var id := multiplayer.get_remote_sender_id()
+	if server:
+		_last_heard[id] = Time.get_ticks_msec()
+	return id
 
 
 func _on_connected_to_server() -> void:
@@ -139,7 +164,13 @@ func _on_server_disconnected() -> void:
 	disconnected.emit()
 
 
+func _on_peer_connected(id: int) -> void:
+	if server:
+		_last_heard[id] = Time.get_ticks_msec()
+
+
 func _on_peer_disconnected(id: int) -> void:
+	_last_heard.erase(id)
 	if server:
 		server.handle_leave(id)
 

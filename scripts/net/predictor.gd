@@ -13,7 +13,9 @@ const MAX_HISTORY := 120
 var _player: Player
 ## (seq, bits) of inputs the server has not acknowledged yet.
 var _history: Array[Vector2i] = []
-var _next_seq: int = 1
+## Shared by every Predictor, so sequence numbers keep rising from one match
+## to the next and late inputs from an old match are ignored as stale.
+static var _next_seq: int = 1
 
 
 func _init(player: Player) -> void:

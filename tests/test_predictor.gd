@@ -30,7 +30,7 @@ func test_replay_from_acked_state_reproduces_prediction() -> void:
 	var acked_state := {}
 	for i in 20:
 		var seq := predictor.apply(Protocol.IN_RIGHT | Protocol.IN_SPRINT, DELTA)
-		if seq == 8:
+		if i == 7:
 			acked_state = _player.get_state()
 			acked_state.last_seq = seq
 	var predicted := _player.position
@@ -43,12 +43,13 @@ func test_replay_from_acked_state_reproduces_prediction() -> void:
 func test_small_correction_is_smoothed() -> void:
 	await _setup()
 	var predictor := Predictor.new(_player)
+	var last_seq := 0
 	for i in 10:
-		predictor.apply(Protocol.IN_DOWN, DELTA)
+		last_seq = predictor.apply(Protocol.IN_DOWN, DELTA)
 	var predicted := _player.position
 	var server_state := _player.get_state()
 	server_state.pos += Vector2(10, 0)
-	server_state.last_seq = 10
+	server_state.last_seq = last_seq
 	predictor.reconcile(server_state, DELTA)
 	check(_player.position.distance_to(predicted + Vector2(10, 0)) < 0.01, "body moved to server position")
 	check(_player.visual_offset.distance_to(Vector2(-10, 0)) < 0.01, "sprite stays where it was")
@@ -58,10 +59,10 @@ func test_small_correction_is_smoothed() -> void:
 func test_large_correction_snaps() -> void:
 	await _setup()
 	var predictor := Predictor.new(_player)
-	predictor.apply(0, DELTA)
+	var seq := predictor.apply(0, DELTA)
 	var server_state := _player.get_state()
 	server_state.pos = Vector2(640, 200)
-	server_state.last_seq = 1
+	server_state.last_seq = seq
 	predictor.reconcile(server_state, DELTA)
 	check_eq(_player.position, Vector2(640, 200), "kickoff teleport")
 	check_eq(_player.visual_offset, Vector2.ZERO, "no smoothing across the pitch")
@@ -71,12 +72,25 @@ func test_large_correction_snaps() -> void:
 func test_server_stamina_is_adopted() -> void:
 	await _setup()
 	var predictor := Predictor.new(_player)
-	predictor.apply(0, DELTA)
+	var seq := predictor.apply(0, DELTA)
 	var server_state := _player.get_state()
 	server_state.stamina = 12.0
 	server_state.exhausted = true
-	server_state.last_seq = 1
+	server_state.last_seq = seq
 	predictor.reconcile(server_state, DELTA)
 	check_near(_player.stamina, 12.0, 0.5, "stamina")
 	check(_player.is_exhausted, "exhausted")
+	_teardown()
+
+
+func test_sequence_numbers_keep_rising_across_matches() -> void:
+	# A new match makes a new Predictor; its inputs must still outrank stale
+	# ones from the previous match that reach the server late.
+	await _setup()
+	var first_match := Predictor.new(_player)
+	var last_old := 0
+	for i in 5:
+		last_old = first_match.apply(0, DELTA)
+	var second_match := Predictor.new(_player)
+	check(second_match.apply(0, DELTA) > last_old, "new match continues the sequence")
 	_teardown()

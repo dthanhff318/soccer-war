@@ -183,3 +183,23 @@ func test_simultaneous_disconnects_send_nothing_to_closed_sockets() -> void:
 	guest.leave()
 	check(await wait_until(func(): return _server.room_count() == 0), "room deleted")
 	await _teardown()
+
+
+func test_silent_client_is_disconnected() -> void:
+	_start_server()
+	_server.idle_timeout = 1.5
+	var host := _make_client("ClientA")
+	var guest := _make_client("ClientB")
+	check(await wait_until(func(): return host.is_online() and guest.is_online()), "connect")
+	host.request_create.rpc_id(1, "Alice")
+	check(await wait_until(func(): return host.current_room.has("code")), "room")
+	guest.request_join.rpc_id(1, host.current_room.code, "Bob")
+	check(await wait_until(func(): return host.current_room.get("players", []).size() == 2), "joined")
+	var dropped: Array[bool] = []
+	guest.disconnected.connect(func(): dropped.append(true))
+	# The guest's tab freezes: no pings, no inputs. The host keeps pinging.
+	guest.set_process(false)
+	check(await wait_until(func(): return not dropped.is_empty(), 600), "silent guest disconnected")
+	check(await wait_until(func(): return host.current_room.players.size() == 1), "guest removed from room")
+	check(host.is_online(), "pinging host stays connected")
+	await _teardown()

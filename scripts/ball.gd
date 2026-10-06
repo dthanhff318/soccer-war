@@ -14,11 +14,21 @@ extends CharacterBody2D
 ## How much faster than the player the ball leaves after being run into.
 @export var push_factor: float = 1.2
 
+## Off on online clients, where server snapshots place the ball via show_at().
+## On the server the room calls step() itself, after the players move.
+@export var simulated: bool = true
+
 ## Caps collisions resolved per frame so a ball wedged in a corner can't loop.
 const MAX_BOUNCES := 4
 
 
 func _physics_process(delta: float) -> void:
+	if simulated:
+		step(delta)
+
+
+## Advances the ball one physics step: drag, movement and bounces.
+func step(delta: float) -> void:
 	velocity = velocity.move_toward(Vector2.ZERO, drag * delta)
 	velocity = velocity.limit_length(max_speed)
 	_move_with_bounces(velocity * delta)
@@ -39,6 +49,18 @@ func _move_with_bounces(motion: Vector2) -> void:
 		var damping := net_damping if collider and collider.is_in_group("goal_net") else bounce_damping
 		velocity = velocity.bounce(normal) * damping
 		motion = collision.get_remainder().bounce(normal) * damping
+
+
+## Puts the ball at rest at `pos` (kickoff).
+func reset(pos: Vector2) -> void:
+	position = pos
+	velocity = Vector2.ZERO
+
+
+## Places the ball from a snapshot, rolling it by the distance it moved.
+func show_at(pos: Vector2) -> void:
+	rotation += position.distance_to(pos) / radius
+	position = pos
 
 
 ## Adds an impulse to the ball, clamped to max_speed on the next frame.

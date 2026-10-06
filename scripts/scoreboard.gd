@@ -35,6 +35,8 @@ var _score_right: int = 0
 ## "left", "right" or "" when nothing is blinking.
 var _blink_side: String = ""
 var _blink_left: float = 0.0
+## Match clock shown between the scores; the separator dots when empty.
+var _clock_text: String = ""
 
 
 func set_score(left: int, right: int) -> void:
@@ -45,6 +47,12 @@ func set_score(left: int, right: int) -> void:
 	_score_left = left
 	_score_right = right
 	queue_redraw()
+
+
+func set_clock(text: String) -> void:
+	if text != _clock_text:
+		_clock_text = text
+		queue_redraw()
 
 
 func _start_blink(side: String) -> void:
@@ -78,7 +86,11 @@ func _draw() -> void:
 
 	_draw_score(_score_left, left_window, window_padding, _is_blanked("left"))
 	_draw_score(_score_right, right_window, window_padding, _is_blanked("right"))
-	_draw_separator(Vector2(size.x / 2.0, row_top + window_size.y / 2.0))
+	var center := Vector2(size.x / 2.0, row_top + window_size.y / 2.0)
+	if _clock_text.is_empty():
+		_draw_separator(center)
+	else:
+		_draw_clock(center)
 
 
 func _draw_panel() -> void:
@@ -119,6 +131,14 @@ func _draw_separator(center: Vector2) -> void:
 		var dot := Rect2(center + Vector2(-3, offset_y - 3), Vector2(6, 6))
 		draw_rect(dot.grow(2), Color(led_on, 0.2))
 		draw_rect(dot, led_on)
+
+
+func _draw_clock(center: Vector2) -> void:
+	var clock_font := font if font else ThemeDB.fallback_font
+	var font_size := LABEL_FONT_SIZE + 2
+	var text_size := clock_font.get_string_size(_clock_text, HORIZONTAL_ALIGNMENT_LEFT, -1, font_size)
+	var baseline := Vector2(center.x - text_size.x / 2.0, center.y + font_size / 2.0 - 2.0)
+	draw_string(clock_font, baseline, _clock_text, HORIZONTAL_ALIGNMENT_LEFT, -1, font_size, led_on)
 
 
 ## Draws one digit; `digit` of -1 (or `blanked`) shows only unlit segments.

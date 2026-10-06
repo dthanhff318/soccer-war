@@ -4,6 +4,10 @@ extends CharacterBody2D
 ## Top-down player controller. Moves on the pitch plane and kicks
 ## any ball within reach, away from the player's facing direction.
 ## Holding sprint runs faster at the cost of stamina.
+##
+## Each physics step is driven by input bits (see Protocol): read from the
+## keyboard in offline play, received over the network on the server, and
+## replayed by the client-side Predictor.
 
 signal stamina_changed(current: float, maximum: float, exhausted: bool)
 
@@ -13,6 +17,9 @@ signal stamina_changed(current: float, maximum: float, exhausted: bool)
 @export var friction: float = 1800.0
 @export var kick_strength: float = 700.0
 @export var kick_radius: float = 38.4
+## Offline play: read the keyboard every physics tick. Online, the server
+## room and the client Predictor call simulate() instead.
+@export var keyboard_control: bool = false
 
 @export_group("Stamina")
 @export var max_stamina: float = 100.0
@@ -25,24 +32,53 @@ signal stamina_changed(current: float, maximum: float, exhausted: bool)
 ## Once drained to zero, sprinting stays locked until stamina reaches this.
 @export var exhausted_recover_at: float = 30.0
 
+const RING_RADIUS := 18.0
+const NAME_FONT_SIZE := 12
+## How quickly a smoothed prediction correction fades, per second.
+const OFFSET_DECAY := 15.0
+
 var stamina: float
 ## True after stamina hit zero; prevents stutter-sprinting on an empty bar.
 var is_exhausted: bool = false
+var team: int = Roster.Team.LEFT
+var display_name: String = ""
+## The player this client controls; drawn with an extra white ring.
+var is_local: bool = false
+## Draw offset that hides small prediction corrections; decays to zero.
+var visual_offset: Vector2 = Vector2.ZERO
 var _regen_cooldown: float = 0.0
 
 ## Last non-zero movement direction, used to aim kicks while standing still.
 var _facing: Vector2 = Vector2.RIGHT
 
 @onready var _kick_area: Area2D = $KickArea
+@onready var _sprite: Sprite2D = $Sprite
 
 
 func _ready() -> void:
 	stamina = max_stamina
 
 
+func _process(delta: float) -> void:
+	if visual_offset == Vector2.ZERO and _sprite.position == Vector2.ZERO:
+		return
+	visual_offset = visual_offset.lerp(Vector2.ZERO, minf(OFFSET_DECAY * delta, 1.0))
+	if visual_offset.length() < 0.1:
+		visual_offset = Vector2.ZERO
+	_sprite.position = visual_offset
+	queue_redraw()
+
+
 func _physics_process(delta: float) -> void:
-	var input_dir := Input.get_vector("move_left", "move_right", "move_up", "move_down")
-	var sprinting := _update_stamina(input_dir != Vector2.ZERO, delta)
+	if keyboard_control:
+		simulate(Protocol.keyboard_bits(Input.is_action_just_pressed("kick")), delta)
+
+
+## Advances the player one physics step using `bits` (Protocol.IN_*).
+func simulate(bits: int, delta: float) -> void:
+	var input_dir := Protocol.input_vector(bits)
+	var wants_sprint := (bits & Protocol.IN_SPRINT) != 0
+	var sprinting := _update_stamina(input_dir != Vector2.ZERO, wants_sprint, delta)
 	var target_speed := sprint_speed if sprinting else move_speed
 
 	if input_dir != Vector2.ZERO:
@@ -56,16 +92,38 @@ func _physics_process(delta: float) -> void:
 	move_and_slide()
 	_push_touched_balls(speed_before_move)
 
-	if Input.is_action_just_pressed("kick"):
+	if bits & Protocol.IN_KICK:
 		_try_kick()
+
+
+## Everything the server sends for this player in a snapshot.
+func get_state() -> Dictionary:
+	return {
+		"pos": position,
+		"vel": velocity,
+		"stamina": stamina,
+		"regen": _regen_cooldown,
+		"exhausted": is_exhausted,
+	}
+
+
+func set_state(state: Dictionary) -> void:
+	position = state.pos
+	velocity = state.vel
+	_regen_cooldown = state.regen
+	var changed: bool = stamina != state.stamina or is_exhausted != state.exhausted
+	stamina = state.stamina
+	is_exhausted = state.exhausted
+	if changed:
+		stamina_changed.emit(stamina, max_stamina, is_exhausted)
 
 
 ## Drains or regenerates stamina for this frame and returns whether the
 ## player is actually sprinting (wants to, is moving, and has stamina).
-func _update_stamina(is_moving: bool, delta: float) -> bool:
+func _update_stamina(is_moving: bool, wants_sprint: bool, delta: float) -> bool:
 	var previous := stamina
 	var was_exhausted := is_exhausted
-	var sprinting := Input.is_action_pressed("sprint") and is_moving and not is_exhausted
+	var sprinting := wants_sprint and is_moving and not is_exhausted
 
 	if sprinting:
 		stamina = maxf(stamina - sprint_drain * delta, 0.0)
@@ -103,3 +161,15 @@ func _try_kick() -> void:
 			# the ball is sitting exactly on top of the player.
 			var dir := to_ball.normalized() if to_ball.length() > 1.0 else _facing
 			body.kick(dir * kick_strength)
+
+
+## Team ring under the sprite, plus the name above it in online play.
+func _draw() -> void:
+	draw_arc(visual_offset, RING_RADIUS, 0.0, TAU, 32, MatchRules.TEAM_COLORS[team], 3.0, true)
+	if is_local:
+		draw_arc(visual_offset, RING_RADIUS + 3.0, 0.0, TAU, 32, Color.WHITE, 1.5, true)
+	if not display_name.is_empty():
+		var font := ThemeDB.fallback_font
+		var width := font.get_string_size(display_name, HORIZONTAL_ALIGNMENT_LEFT, -1, NAME_FONT_SIZE).x
+		var baseline := visual_offset + Vector2(-width / 2.0, -RING_RADIUS - 8.0)
+		draw_string(font, baseline, display_name, HORIZONTAL_ALIGNMENT_LEFT, -1, NAME_FONT_SIZE, Color.WHITE)

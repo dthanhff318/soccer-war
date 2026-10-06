@@ -89,13 +89,10 @@ A page can target another server with `?server=wss://host.example.com`.
 
 The free plan sleeps after 15 idle minutes; the first player then waits about a minute.
 
-**Web client → Vercel:**
-```bash
-tools/build-web.sh
-vercel deploy export --prod
-```
-`web/vercel.json` (copied into `export/`) adds the COOP/COEP headers the threaded
-web build needs.
+**Web client → Vercel:** the web build in `export/` is committed. Connect the
+repo to a Vercel project; on every push to `main` Vercel serves `export/` as-is
+(`vercel.json`: no build step, COOP/COEP headers for the threaded web build).
+Run `tools/build-web.sh` before each commit that changes the game (see `CLAUDE.md`).
 
 ## Testing
 
@@ -113,7 +110,8 @@ soccer-war/
 ├── export_presets.cfg     # Web export preset → export/index.html
 ├── serve.py               # local static server with COOP/COEP headers
 ├── Dockerfile, render.yaml  # game server image for Render
-├── web/vercel.json        # Vercel headers for the web build
+├── vercel.json            # Vercel: serve export/ with COOP/COEP headers
+├── CLAUDE.md              # project rules (rebuild export/ before committing)
 ├── scenes/
 │   ├── boot.tscn          # --server → server.tscn, else menu.tscn
 │   ├── menu.tscn, lobby.tscn

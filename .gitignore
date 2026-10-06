@@ -3,10 +3,12 @@
 /android/
 *.translation
 
-# Export output
-/export/*
-!/export/.gitkeep
-!/export/.gdignore
+# Web build output is committed so Vercel serves it straight from git
+# (see CLAUDE.md: rebuild before every commit). Keep local-only files out.
+/export/.vercel/
+/export/.env*
+/export/*.import
+/export/vercel.json
 
 # OS / editor
 .DS_Store

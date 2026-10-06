@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
-# Exports the web build to export/ and adds the Vercel config (COOP/COEP
-# headers needed by Godot's threaded web build). Deploy with:
-#   vercel deploy export --prod
+# Exports the web build to export/. The build is committed: pushing to main
+# makes Vercel serve export/ as-is (see vercel.json), so run this before
+# every commit that touches the game.
 set -euo pipefail
 cd "$(dirname "$0")/.."
 if grep -q '^const PRODUCTION_URL := ""' scripts/net/protocol.gd; then
@@ -10,5 +10,4 @@ if grep -q '^const PRODUCTION_URL := ""' scripts/net/protocol.gd; then
 	echo "         Set it to your Render URL (wss://...) before deploying to Vercel." >&2
 fi
 godot --headless --export-release "Web" export/index.html
-cp web/vercel.json export/vercel.json
 echo "Web build ready in export/"

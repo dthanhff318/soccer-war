@@ -35,8 +35,8 @@ func apply(bits: int, delta: float) -> int:
 
 
 ## Adopts the server's `state` (a Player state plus `last_seq`) and replays
-## every input the server has not processed yet. Kicks are not replayed:
-## the ball is server-driven, so a replayed kick would do nothing useful.
+## every input the server has not processed yet. Kicks and passes are not
+## replayed: the ball is server-driven, so replaying them would do nothing useful.
 func reconcile(state: Dictionary, delta: float) -> void:
 	var acked: int = state.last_seq
 	while not _history.is_empty() and _history[0].x <= acked:
@@ -44,7 +44,7 @@ func reconcile(state: Dictionary, delta: float) -> void:
 	var predicted := _player.position
 	_player.set_state(state)
 	for entry in _history:
-		_player.simulate(entry.y & ~Protocol.IN_KICK, delta)
+		_player.simulate(entry.y & ~Protocol.IN_ONE_SHOT, delta)
 	var error := predicted - _player.position
 	if error.length() > SNAP_DISTANCE:
 		_player.visual_offset = Vector2.ZERO

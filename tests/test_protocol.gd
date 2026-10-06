@@ -64,3 +64,8 @@ func test_snapshot_round_trip() -> void:
 
 func test_decode_empty_snapshot_is_empty() -> void:
 	check_eq(Protocol.decode_snapshot(PackedByteArray()), {}, "empty bytes")
+
+
+func test_pass_bit_is_in_mask_and_does_not_move() -> void:
+	check((Protocol.INPUT_MASK & Protocol.IN_PASS) == Protocol.IN_PASS, "mask keeps pass")
+	check_eq(Protocol.input_vector(Protocol.IN_PASS | Protocol.IN_LEFT), Vector2.LEFT, "pass + left")

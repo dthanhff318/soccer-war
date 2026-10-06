@@ -96,7 +96,7 @@ func _physics_process(delta: float) -> void:
 	if not _pending_state.is_empty():
 		_predictor.reconcile(_pending_state, delta)
 		_pending_state = {}
-	var bits := Protocol.keyboard_bits(Input.is_action_just_pressed("kick"))
+	var bits := Protocol.keyboard_bits(Input.is_action_just_pressed("kick"), Input.is_action_just_pressed("pass"))
 	var seq := _predictor.apply(bits, delta)
 	Net.send_input.rpc_id(1, seq, bits)
 

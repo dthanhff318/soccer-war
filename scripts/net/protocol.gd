@@ -24,7 +24,11 @@ const IN_DOWN := 8
 const IN_SPRINT := 16
 ## Set only on the tick the kick key went down.
 const IN_KICK := 32
-const INPUT_MASK := 63
+## Set only on the tick the pass key went down.
+const IN_PASS := 64
+const INPUT_MASK := 127
+## One-shot actions: never repeated or replayed.
+const IN_ONE_SHOT := IN_KICK | IN_PASS
 
 ## No 0/O or 1/I, so codes read unambiguously when shared aloud.
 const CODE_ALPHABET := "ABCDEFGHJKLMNPQRSTUVWXYZ23456789"
@@ -38,9 +42,9 @@ static func input_vector(bits: int) -> Vector2:
 	return Vector2(x, y).limit_length(1.0)
 
 
-## Packs the current keyboard state. `kick` is passed in because "just
-## pressed" must be read exactly once per physics tick by the caller.
-static func keyboard_bits(kick: bool) -> int:
+## Packs the current keyboard state. `kick` and `pass_ball` are passed in
+## because "just pressed" must be read exactly once per physics tick.
+static func keyboard_bits(kick: bool, pass_ball: bool = false) -> int:
 	var bits := 0
 	if Input.is_action_pressed("move_left"):
 		bits |= IN_LEFT
@@ -54,6 +58,8 @@ static func keyboard_bits(kick: bool) -> int:
 		bits |= IN_SPRINT
 	if kick:
 		bits |= IN_KICK
+	if pass_ball:
+		bits |= IN_PASS
 	return bits
 
 

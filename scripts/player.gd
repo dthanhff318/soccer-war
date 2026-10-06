@@ -16,6 +16,8 @@ signal stamina_changed(current: float, maximum: float, exhausted: bool)
 @export var acceleration: float = 2400.0
 @export var friction: float = 1800.0
 @export var kick_strength: float = 700.0
+## Speed of a pass (I key): softer than a kick, along the running direction.
+@export var pass_strength: float = 420.0
 @export var kick_radius: float = 38.4
 ## Offline play: read the keyboard every physics tick. Online, the server
 ## room and the client Predictor call simulate() instead.
@@ -71,7 +73,7 @@ func _process(delta: float) -> void:
 
 func _physics_process(delta: float) -> void:
 	if keyboard_control:
-		simulate(Protocol.keyboard_bits(Input.is_action_just_pressed("kick")), delta)
+		simulate(Protocol.keyboard_bits(Input.is_action_just_pressed("kick"), Input.is_action_just_pressed("pass")), delta)
 
 
 ## Advances the player one physics step using `bits` (Protocol.IN_*).
@@ -94,6 +96,8 @@ func simulate(bits: int, delta: float) -> void:
 
 	if bits & Protocol.IN_KICK:
 		_try_kick()
+	elif bits & Protocol.IN_PASS:
+		_try_pass()
 
 
 ## Everything the server sends for this player in a snapshot.
@@ -161,6 +165,13 @@ func _try_kick() -> void:
 			# the ball is sitting exactly on top of the player.
 			var dir := to_ball.normalized() if to_ball.length() > 1.0 else _facing
 			body.kick(dir * kick_strength)
+
+
+## Passes every ball within reach straight along the running direction.
+func _try_pass() -> void:
+	for body in _kick_area.get_overlapping_bodies():
+		if body is Ball:
+			body.start_pass(_facing * pass_strength)
 
 
 ## Team ring under the sprite, plus the name above it in online play.

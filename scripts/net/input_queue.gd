@@ -10,7 +10,7 @@ extends RefCounted
 ##   that input arrives it is acknowledged but not simulated again.
 ## - More than MAX_BACKLOG queued: the oldest are skipped the same way, so a
 ##   burst never leaves a standing delay.
-## Skipped inputs pass their kick on to the next input, so no kick is lost.
+## Skipped inputs pass their kick or pass on to the next input, so none is lost.
 
 const MAX_BACKLOG := 2
 const MAX_REPEAT := 6
@@ -42,7 +42,7 @@ func take() -> int:
 	if _queue.is_empty():
 		_debt = mini(_debt + 1, MAX_DEBT)
 		_starved_ticks += 1
-		return _last_bits & ~Protocol.IN_KICK if _starved_ticks <= MAX_REPEAT else 0
+		return _last_bits & ~Protocol.IN_ONE_SHOT if _starved_ticks <= MAX_REPEAT else 0
 	_starved_ticks = 0
 	var entry: Vector2i = _queue.pop_front()
 	last_seq = entry.x
@@ -56,5 +56,5 @@ func _skip_oldest() -> void:
 	last_seq = skipped.x
 	_debt = maxi(_debt - 1, 0)
 	var next: Vector2i = _queue[0]
-	next.y |= skipped.y & Protocol.IN_KICK
+	next.y |= skipped.y & Protocol.IN_ONE_SHOT
 	_queue[0] = next

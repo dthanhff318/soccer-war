@@ -39,12 +39,12 @@ script = ExtResource("8_scoreboard")
 font = ExtResource("7_pixel_font")
 
 [node name="Hint" type="Label" parent="UI"]
-offset_left = 556.0
+offset_left = 456.0
 offset_top = 672.0
 offset_right = 1256.0
 offset_bottom = 700.0
 theme_override_colors/font_color = Color(1, 1, 1, 0.6)
-text = "WASD / Arrows to move  ·  Shift to sprint  ·  Space to kick  ·  Esc for menu"
+text = "WASD / Arrows to move  ·  Shift to sprint  ·  Space to kick  ·  I to pass  ·  Esc for menu"
 horizontal_alignment = 2
 
 [node name="GoalBanner" type="Label" parent="UI"]

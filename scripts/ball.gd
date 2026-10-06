@@ -18,6 +18,11 @@ extends CharacterBody2D
 ## On the server the room calls step() itself, after the players move.
 @export var simulated: bool = true
 
+## True while the ball travels from a pass. A pass stops dead on the first
+## player it touches; hitting anything else, a kick, or coming to rest turns
+## it back into an ordinary ball.
+var is_pass: bool = false
+
 ## Caps collisions resolved per frame so a ball wedged in a corner can't loop.
 const MAX_BOUNCES := 4
 
@@ -32,6 +37,8 @@ func step(delta: float) -> void:
 	velocity = velocity.move_toward(Vector2.ZERO, drag * delta)
 	velocity = velocity.limit_length(max_speed)
 	_move_with_bounces(velocity * delta)
+	if velocity == Vector2.ZERO:
+		is_pass = false
 
 	# Roll the ball visually: arc length travelled / radius = radians turned.
 	rotation += velocity.length() * delta / radius
@@ -44,8 +51,14 @@ func _move_with_bounces(motion: Vector2) -> void:
 		var collision := move_and_collide(motion)
 		if collision == null:
 			return
-		var normal := collision.get_normal()
 		var collider := collision.get_collider() as Node
+		if is_pass:
+			is_pass = false
+			if collider is Player:
+				# Trapped: rest where it touched the player.
+				velocity = Vector2.ZERO
+				return
+		var normal := collision.get_normal()
 		var damping := net_damping if collider and collider.is_in_group("goal_net") else bounce_damping
 		velocity = velocity.bounce(normal) * damping
 		motion = collision.get_remainder().bounce(normal) * damping
@@ -55,6 +68,7 @@ func _move_with_bounces(motion: Vector2) -> void:
 func reset(pos: Vector2) -> void:
 	position = pos
 	velocity = Vector2.ZERO
+	is_pass = false
 
 
 ## Places the ball from a snapshot, rolling it by the distance it moved.
@@ -66,11 +80,23 @@ func show_at(pos: Vector2) -> void:
 ## Adds an impulse to the ball, clamped to max_speed on the next frame.
 func kick(impulse: Vector2) -> void:
 	velocity += impulse
+	is_pass = false
+
+
+## Sends the ball exactly along `impulse` as a pass (see is_pass).
+func start_pass(impulse: Vector2) -> void:
+	velocity = impulse
+	is_pass = true
 
 
 ## Called when a moving player runs into the ball. Ensures the ball travels
 ## away along `direction` at least a little faster than the player was moving.
 func push(direction: Vector2, player_speed: float) -> void:
+	if is_pass:
+		# A player ran into a pass: it stops at their feet.
+		is_pass = false
+		velocity = Vector2.ZERO
+		return
 	var target_speed := player_speed * push_factor
 	var current_along := velocity.dot(direction)
 	if current_along < target_speed:

@@ -7,9 +7,13 @@ config_version=5
 
 config/name="Soccer War"
 config/description="2D soccer game targeting HTML5 / web export."
-run/main_scene="res://scenes/main.tscn"
+run/main_scene="res://scenes/boot.tscn"
 config/features=PackedStringArray("4.3", "GL Compatibility")
 config/icon="res://icon.svg"
+
+[autoload]
+
+Net="*res://scripts/net/net.gd"
 
 [display]
 

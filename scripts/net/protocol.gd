@@ -7,7 +7,7 @@ extends RefCounted
 const DEFAULT_PORT := 9080
 const LOCAL_URL := "ws://127.0.0.1:9080"
 ## wss:// address of the deployed game server. Empty until it is deployed.
-const PRODUCTION_URL := ""
+const PRODUCTION_URL := "wss://soccer-war.onrender.com"
 
 ## Physics ticks per second, on server and client alike.
 const TICK_RATE := 60

@@ -84,7 +84,7 @@ func _build_home() -> VBoxContainer:
 	home.add_theme_constant_override("separation", 14)
 	_online_button = _big_button("Play online", _show_online, UiKit.Style.PRIMARY)
 	_practice_button = _big_button("Practice", _on_practice_pressed, UiKit.Style.ACCENT)
-	_characters_button = _big_button("Characters", _change_scene.bind(CHARACTERS_SCENE), UiKit.Style.GHOST)
+	_characters_button = _big_button("Characters", _on_characters_pressed, UiKit.Style.GHOST)
 	_help_button = _big_button("How to play", _show_help, UiKit.Style.GHOST)
 	# The pixel font has no "·", so stick to letters, spaces and brackets.
 	_settings_button = _big_button("Settings (soon)", _on_settings_pressed, UiKit.Style.GHOST)
@@ -248,9 +248,16 @@ func _on_join_pressed() -> void:
 	_send(func() -> void: Net.request_join.rpc_id(1, code, player_name))
 
 
+## Practice starts by picking who to play as.
 func _on_practice_pressed() -> void:
 	Net.leave()
-	_change_scene(MATCH_SCENE)
+	CharactersScreen.pick_for_practice = true
+	_change_scene(CHARACTERS_SCENE)
+
+
+func _on_characters_pressed() -> void:
+	CharactersScreen.pick_for_practice = false
+	_change_scene(CHARACTERS_SCENE)
 
 
 func _remember_name() -> String:

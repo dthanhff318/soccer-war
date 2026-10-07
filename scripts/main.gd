@@ -22,6 +22,9 @@ var _players: Dictionary = {}  # peer id -> Player (online)
 var _local: Player
 ## Practice only: the red goalkeeper driven by GoalkeeperAI.
 var _keeper: Player
+## Practice as a keeper: the red shooter and the drill that drives it.
+var _shooter: Player
+var _drill: ShootingDrill
 var _predictor: Predictor
 var _buffer := SnapshotBuffer.new()
 ## Newest server state of the local player, reconciled on the next physics
@@ -51,6 +54,14 @@ func _setup_offline() -> void:
 	_local.keyboard_control = true
 	_local.is_local = true
 	_local.stamina_changed.connect(_stamina_bar.set_stamina)
+	var character := Characters.by_id(CharactersScreen.practice_character_id)
+	if character.is_empty():
+		character = Characters.by_id(CharactersScreen.DEFAULT_CHARACTER)
+	CharacterStats.apply(_local, character)
+	_local.display_name = character.name
+	if character.keeper:
+		_setup_keeper_drill()
+		return
 	_keeper = PLAYER_SCENE.instantiate()
 	_keeper.team = Roster.Team.RIGHT
 	_keeper.is_goalkeeper = true
@@ -63,6 +74,18 @@ func _setup_offline() -> void:
 		mate.display_name = "Mate %d" % (i + 1)
 		mate.position = OFFLINE_TEAMMATE_SPOTS[i]
 		add_child(mate)
+
+
+## Keeper practice: you stand in the left goal while a red shooter fires
+## shot after shot at it.
+func _setup_keeper_drill() -> void:
+	_local.position = GoalkeeperAI.home_position(-1)
+	_shooter = PLAYER_SCENE.instantiate()
+	_shooter.team = Roster.Team.RIGHT
+	_shooter.display_name = "SHOOTER"
+	add_child(_shooter)
+	_drill = ShootingDrill.new(_shooter, _ball)
+	add_child(_drill)
 
 
 func _setup_online() -> void:
@@ -106,7 +129,10 @@ func _unhandled_input(event: InputEvent) -> void:
 
 func _physics_process(delta: float) -> void:
 	if not _online:
-		_keeper.simulate(GoalkeeperAI.bits_for(_keeper.position, _ball.position, 1), delta)
+		if _drill:
+			_shooter.simulate(_drill.next_bits(delta), delta)
+		else:
+			_keeper.simulate(GoalkeeperAI.bits_for(_keeper.position, _ball.position, 1), delta)
 		_check_offline_goal()
 		return
 	if _predictor == null:
@@ -194,5 +220,7 @@ func _on_offline_goal(team: int) -> void:
 	_goal_banner.play()
 
 	await get_tree().create_timer(MatchRules.CELEBRATION_SECONDS, false, true).timeout
-	_ball.reset(MatchRules.CENTER)
+	# The keeper drill puts the ball where it wants it for the next shot.
+	if _drill == null:
+		_ball.reset(MatchRules.CENTER)
 	_celebrating = false

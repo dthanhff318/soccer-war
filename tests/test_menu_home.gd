@@ -43,12 +43,12 @@ func test_settings_is_coming_soon() -> void:
 	menu.queue_free()
 
 
-func test_practice_starts_the_offline_match() -> void:
+func test_practice_opens_the_character_pick() -> void:
 	var menu := await _open_menu()
 	menu._practice_button.pressed.emit()
 	var reached := await wait_until(func(): return get_tree().current_scene != null \
-		and get_tree().current_scene.scene_file_path == MATCH_SCENE, 30)
-	check(reached, "offline match opened")
+		and get_tree().current_scene.scene_file_path == "res://scenes/characters.tscn", 30)
+	check(reached, "character pick opened")
 	if is_instance_valid(menu):
 		menu.queue_free()
 	get_tree().unload_current_scene()

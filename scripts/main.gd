@@ -20,6 +20,8 @@ var _celebrating: bool = false
 var _online: bool = false
 var _players: Dictionary = {}  # peer id -> Player (online)
 var _local: Player
+## Practice only: the red goalkeeper driven by GoalkeeperAI.
+var _keeper: Player
 var _predictor: Predictor
 var _buffer := SnapshotBuffer.new()
 ## Newest server state of the local player, reconciled on the next physics
@@ -49,6 +51,12 @@ func _setup_offline() -> void:
 	_local.keyboard_control = true
 	_local.is_local = true
 	_local.stamina_changed.connect(_stamina_bar.set_stamina)
+	_keeper = PLAYER_SCENE.instantiate()
+	_keeper.team = Roster.Team.RIGHT
+	_keeper.is_goalkeeper = true
+	_keeper.display_name = "GK"
+	_keeper.position = GoalkeeperAI.home_position(1)
+	add_child(_keeper)
 	for i in OFFLINE_TEAMMATE_SPOTS.size():
 		var mate: Player = PLAYER_SCENE.instantiate()
 		mate.team = Roster.Team.LEFT
@@ -98,6 +106,7 @@ func _unhandled_input(event: InputEvent) -> void:
 
 func _physics_process(delta: float) -> void:
 	if not _online:
+		_keeper.simulate(GoalkeeperAI.bits_for(_keeper.position, _ball.position, 1), delta)
 		_check_offline_goal()
 		return
 	if _predictor == null:

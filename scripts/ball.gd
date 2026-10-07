@@ -23,6 +23,14 @@ extends CharacterBody2D
 ## it back into an ordinary ball.
 var is_pass: bool = false
 
+## Goalkeeper saves: slower than this is caught dead where it touches.
+const KEEPER_CATCH_SPEED := 300.0
+## Faster shots spill back at this share of their speed, rising linearly
+## from KEEPER_MIN_RATIO at the catch speed to KEEPER_MAX_RATIO at this speed.
+const KEEPER_FULL_SPEED := 650.0
+const KEEPER_MIN_RATIO := 0.2
+const KEEPER_MAX_RATIO := 0.45
+
 ## Caps collisions resolved per frame so a ball wedged in a corner can't loop.
 const MAX_BOUNCES := 4
 
@@ -59,9 +67,35 @@ func _move_with_bounces(motion: Vector2) -> void:
 				velocity = Vector2.ZERO
 				return
 		var normal := collision.get_normal()
+		if collider is Player and collider.is_goalkeeper:
+			var speed := velocity.length()
+			keeper_touch(normal)
+			if velocity == Vector2.ZERO:
+				return
+			motion = collision.get_remainder().bounce(normal) * (velocity.length() / speed)
+			continue
 		var damping := net_damping if collider and collider.is_in_group("goal_net") else bounce_damping
 		velocity = velocity.bounce(normal) * damping
 		motion = collision.get_remainder().bounce(normal) * damping
+
+
+## Speed a shot keeps after a goalkeeper touches it (0 = caught).
+static func keeper_rebound_speed(speed: float) -> float:
+	if speed < KEEPER_CATCH_SPEED:
+		return 0.0
+	var t := clampf((speed - KEEPER_CATCH_SPEED) / (KEEPER_FULL_SPEED - KEEPER_CATCH_SPEED), 0.0, 1.0)
+	return speed * lerpf(KEEPER_MIN_RATIO, KEEPER_MAX_RATIO, t)
+
+
+## A goalkeeper touched the ball; `normal` points from the keeper to the ball.
+## Slow balls are caught dead, fast ones spill back softly.
+func keeper_touch(normal: Vector2) -> void:
+	is_pass = false
+	var rebound := keeper_rebound_speed(velocity.length())
+	if rebound == 0.0:
+		velocity = Vector2.ZERO
+	else:
+		velocity = velocity.bounce(normal).normalized() * rebound
 
 
 ## Puts the ball at rest at `pos` (kickoff).

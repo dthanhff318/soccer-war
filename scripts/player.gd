@@ -50,6 +50,7 @@ const POWER_BAR_SIZE := Vector2(36, 5)
 const SPRITE_SIZE := 33.0
 ## Gap between the rings and the power bar above / the name below.
 const LABEL_GAP := 3.0
+const KEEPER_RING_COLOR := Color(1.0, 0.8, 0.25)
 
 var stamina: float
 ## True after stamina hit zero; prevents stutter-sprinting on an empty bar.
@@ -58,6 +59,8 @@ var team: int = Roster.Team.LEFT
 var display_name: String = ""
 ## The player this client controls; drawn with an extra white ring.
 var is_local: bool = false
+## Keepers catch slow shots and spill hard ones softly (see Ball.keeper_touch).
+var is_goalkeeper: bool = false
 ## Draw offset that hides small prediction corrections; decays to zero.
 var visual_offset: Vector2 = Vector2.ZERO
 var _regen_cooldown: float = 0.0
@@ -184,7 +187,10 @@ func _push_touched_balls(speed: float) -> void:
 		var ball := collision.get_collider() as Ball
 		if ball:
 			# The normal points from the ball back toward the player.
-			ball.push(-collision.get_normal(), speed)
+			if is_goalkeeper:
+				ball.keeper_touch(-collision.get_normal())
+			else:
+				ball.push(-collision.get_normal(), speed)
 
 
 ## True while a kick is charging (the power bar is showing).
@@ -259,6 +265,8 @@ func _draw() -> void:
 	draw_arc(visual_offset, RING_RADIUS, 0.0, TAU, 32, Teams.color_of(team), 3.0, true)
 	if is_local:
 		draw_arc(visual_offset, RING_RADIUS + 3.0, 0.0, TAU, 32, Color.WHITE, 1.5, true)
+	elif is_goalkeeper:
+		draw_arc(visual_offset, RING_RADIUS + 3.0, 0.0, TAU, 32, KEEPER_RING_COLOR, 2.0, true)
 	if is_local and _kick_held:
 		_draw_power_bar()
 	if not display_name.is_empty():
@@ -283,4 +291,4 @@ func _draw_power_bar() -> void:
 
 ## The white "you" ring is a little larger than the team ring.
 func _outer_ring_radius() -> float:
-	return RING_RADIUS + (3.0 if is_local else 0.0)
+	return RING_RADIUS + (3.0 if is_local or is_goalkeeper else 0.0)

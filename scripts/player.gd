@@ -24,7 +24,7 @@ signal stamina_changed(current: float, maximum: float, exhausted: bool)
 ## released and pressed again to charge a new one.
 @export var kick_overhold_time: float = 0.5
 ## Speed of a pass (I key), aimed like a kick.
-@export var pass_strength: float = 250.0
+@export var pass_strength: float = 400.0
 ## Offline play: read the keyboard every physics tick. Online, the server
 ## room and the client Predictor call simulate() instead.
 @export var keyboard_control: bool = false

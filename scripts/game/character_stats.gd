@@ -23,7 +23,7 @@ static func apply(player: Player, character: Dictionary) -> void:
 	player.stamina = player.max_stamina
 	player.max_kick_speed = scale(stats.shooting, 560.0, 650.0, 740.0)
 	player.kick_charge_time = scale(stats.shooting, 1.2, 1.0, 0.8)
-	player.pass_strength = scale(stats.passing, 200.0, 250.0, 340.0)
+	player.pass_strength = scale(stats.passing, 320.0, 400.0, 520.0)
 	player.dribble_push = scale(stats.dribbling, 1.0, 1.2, 1.5)
 	player.set_reach(scale(stats.dribbling, 34.0, 38.4, 44.0))
 

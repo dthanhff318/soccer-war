@@ -51,7 +51,7 @@ func test_strengths_show_up_in_play() -> void:
 	check(cannon.kick_charge_time < 0.85, "CANNON charges fast (%.2f)" % cannon.kick_charge_time)
 	var maestro := _player()
 	CharacterStats.apply(maestro, Characters.by_id("maestro"))
-	check(maestro.pass_strength > 320.0, "MAESTRO passes far (%.0f)" % maestro.pass_strength)
+	check(maestro.pass_strength > 500.0, "MAESTRO passes far (%.0f)" % maestro.pass_strength)
 	var dynamo := _player()
 	CharacterStats.apply(dynamo, Characters.by_id("dynamo"))
 	check(dynamo.max_stamina > 140.0 and dynamo.stamina == dynamo.max_stamina, "DYNAMO has a big, full tank")

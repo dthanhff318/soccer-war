@@ -114,13 +114,13 @@ func test_release_out_of_reach_does_nothing_and_resets() -> void:
 	_teardown()
 
 
-func test_pass_speed_is_250() -> void:
+func test_pass_speed_is_400() -> void:
 	_setup()
 	var player := _player(Vector2(300, 300))
 	var ball := _ball(Vector2(325, 300))
 	await _settle()
 	player.simulate(Protocol.IN_PASS, DELTA)
-	check_near(ball.velocity.length(), 250.0, 0.5, "pass speed")
+	check_near(ball.velocity.length(), 400.0, 0.5, "pass speed")
 	_teardown()
 
 

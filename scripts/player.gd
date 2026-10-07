@@ -43,6 +43,11 @@ const NAME_FONT_SIZE := 12
 ## How quickly a smoothed prediction correction fades, per second.
 const OFFSET_DECAY := 15.0
 const POWER_BAR_SIZE := Vector2(36, 5)
+## Shirt sprite per team, indexed by Roster.Team.
+const TEAM_SPRITES: Array[Texture2D] = [
+	preload("res://assets/field/player/18.png"),
+	preload("res://assets/field/player/6.png"),
+]
 
 var stamina: float
 ## True after stamina hit zero; prevents stutter-sprinting on an empty bar.
@@ -67,6 +72,7 @@ var _facing: Vector2 = Vector2.RIGHT
 
 func _ready() -> void:
 	stamina = max_stamina
+	_sprite.texture = TEAM_SPRITES[team]
 
 
 func _process(delta: float) -> void:

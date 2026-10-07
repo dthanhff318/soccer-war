@@ -28,26 +28,36 @@ func _ready() -> void:
 
 
 func _build_ui() -> void:
-	var column := UiKit.screen(self, 380)
-	column.add_child(UiKit.label("SOCCER WAR", 48, true))
-	_name_edit = UiKit.line_edit("Your name", Roster.MAX_NAME_LENGTH)
-	column.add_child(_name_edit)
-	_buttons.append(UiKit.button("Create room", _on_create_pressed))
-	column.add_child(_buttons.back())
+	var column := UiKit.screen(self)
+	column.add_child(UiKit.title("SOCCER WAR", 64))
+	column.add_child(UiKit.label("ONLINE 4V4 FOOTBALL", 14, UiKit.MUTED))
 
+	var card := UiKit.card(column, 420)
+	card.add_child(UiKit.caption("Your name"))
+	_name_edit = UiKit.line_edit("Enter a name", Roster.MAX_NAME_LENGTH)
+	card.add_child(_name_edit)
+	_buttons.append(UiKit.button("Create room", _on_create_pressed, UiKit.Style.PRIMARY))
+	card.add_child(_buttons.back())
+
+	card.add_child(UiKit.divider("or join a room"))
 	var join_row := HBoxContainer.new()
-	_code_edit = UiKit.line_edit("Room code", Protocol.CODE_LENGTH)
+	join_row.add_theme_constant_override("separation", 10)
+	_code_edit = UiKit.line_edit("CODE", Protocol.CODE_LENGTH)
 	_code_edit.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	_code_edit.text_submitted.connect(func(_text: String) -> void: _on_join_pressed())
 	join_row.add_child(_code_edit)
-	_buttons.append(UiKit.button("Join", _on_join_pressed))
-	join_row.add_child(_buttons.back())
-	column.add_child(join_row)
+	var join := UiKit.button("Join", _on_join_pressed, UiKit.Style.DANGER)
+	join.custom_minimum_size.x = 140
+	_buttons.append(join)
+	join_row.add_child(join)
+	card.add_child(join_row)
 
-	_buttons.append(UiKit.button("Play offline", _on_offline_pressed))
-	column.add_child(_buttons.back())
-	_status = UiKit.label("", 14)
-	column.add_child(_status)
+	_buttons.append(UiKit.button("Play offline", _on_offline_pressed, UiKit.Style.GHOST))
+	card.add_child(_buttons.back())
+	_status = UiKit.label("", 14, UiKit.HIGHLIGHT)
+	card.add_child(_status)
+
+	UiKit.footer(self, "WASD move  ·  Shift sprint  ·  Hold Space shoot  ·  I pass")
 
 
 func _on_create_pressed() -> void:

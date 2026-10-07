@@ -24,38 +24,45 @@ func _ready() -> void:
 
 
 func _build_ui() -> void:
-	var column := UiKit.screen(self, 520)
-	_code_label = UiKit.label("", 40, true)
+	var column := UiKit.screen(self)
+	column.add_child(UiKit.label("ROOM CODE", 14, UiKit.MUTED))
+	_code_label = UiKit.title("", 64, UiKit.HIGHLIGHT)
 	column.add_child(_code_label)
-	column.add_child(UiKit.label("Share this code with your friends", 14))
+	column.add_child(UiKit.label("Share this code with your friends", 14, UiKit.MUTED))
 
 	var teams := HBoxContainer.new()
-	teams.add_theme_constant_override("separation", 40)
+	teams.alignment = BoxContainer.ALIGNMENT_CENTER
+	teams.add_theme_constant_override("separation", 24)
 	for team in [Roster.Team.LEFT, Roster.Team.RIGHT]:
-		var team_column := VBoxContainer.new()
-		team_column.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-		var title := UiKit.label(MatchRules.TEAM_NAMES[team], 24, true)
-		title.add_theme_color_override("font_color", MatchRules.TEAM_COLORS[team])
-		team_column.add_child(title)
+		var team_card := UiKit.card(teams, 280, MatchRules.TEAM_COLORS[team])
+		team_card.add_child(UiKit.title(MatchRules.TEAM_NAMES[team], 28, MatchRules.TEAM_COLORS[team]))
 		var names := VBoxContainer.new()
-		names.custom_minimum_size = Vector2(0, 4 * 28)
-		team_column.add_child(names)
+		names.custom_minimum_size = Vector2(0, Roster.MAX_PER_TEAM * 30)
+		names.add_theme_constant_override("separation", 6)
+		team_card.add_child(names)
 		_team_lists.append(names)
-		team_column.add_child(UiKit.button("Join " + MatchRules.TEAM_NAMES[team], _on_team_pressed.bind(team)))
-		teams.add_child(team_column)
+		var style := UiKit.Style.PRIMARY if team == Roster.Team.LEFT else UiKit.Style.DANGER
+		team_card.add_child(UiKit.button("Join " + MatchRules.TEAM_NAMES[team], _on_team_pressed.bind(team), style))
 	column.add_child(teams)
 
-	_start_button = UiKit.button("Start match", _on_start_pressed)
-	column.add_child(_start_button)
-	column.add_child(UiKit.button("Leave", _on_leave_pressed))
-	_status = UiKit.label("", 14)
+	var actions := HBoxContainer.new()
+	actions.alignment = BoxContainer.ALIGNMENT_CENTER
+	actions.add_theme_constant_override("separation", 16)
+	_start_button = UiKit.button("Start match", _on_start_pressed, UiKit.Style.SUCCESS)
+	_start_button.custom_minimum_size.x = 260
+	actions.add_child(_start_button)
+	var leave := UiKit.button("Leave", _on_leave_pressed, UiKit.Style.GHOST)
+	leave.custom_minimum_size.x = 160
+	actions.add_child(leave)
+	column.add_child(actions)
+	_status = UiKit.label("", 14, UiKit.HIGHLIGHT)
 	column.add_child(_status)
 
 
 func _refresh(state: Dictionary) -> void:
 	if state.is_empty():
 		return
-	_code_label.text = "ROOM  %s" % state.code
+	_code_label.text = state.code
 	for names in _team_lists:
 		for child in names.get_children():
 			child.queue_free()
@@ -63,9 +70,12 @@ func _refresh(state: Dictionary) -> void:
 		var text: String = member.name
 		if member.id == state.host_id:
 			text += "  (host)"
-		if member.id == Net.my_id():
+		var is_me: bool = member.id == Net.my_id()
+		if is_me:
 			text += "  - you"
-		_team_lists[member.team].add_child(UiKit.label(text, 18))
+		var row := UiKit.label(text, 18, UiKit.HIGHLIGHT if is_me else UiKit.TEXT)
+		row.horizontal_alignment = HORIZONTAL_ALIGNMENT_LEFT
+		_team_lists[member.team].add_child(row)
 	var is_host: bool = state.host_id == Net.my_id()
 	_start_button.visible = is_host
 	_status.text = "" if is_host else "Waiting for the host to start…"

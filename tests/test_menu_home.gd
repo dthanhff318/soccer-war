@@ -53,3 +53,35 @@ func test_practice_starts_the_offline_match() -> void:
 		menu.queue_free()
 	get_tree().unload_current_scene()
 	await get_tree().process_frame
+
+
+func test_how_to_play_opens_a_modal_that_closes_three_ways() -> void:
+	var menu := await _open_menu()
+	check(not menu._help_modal.visible, "hidden at start")
+	menu._help_button.pressed.emit()
+	check(menu._help_modal.visible, "opens")
+	menu._help_close_button.pressed.emit()
+	check(not menu._help_modal.visible, "Got it closes")
+
+	menu._help_button.pressed.emit()
+	var esc := InputEventAction.new()
+	esc.action = "ui_cancel"
+	esc.pressed = true
+	menu._unhandled_input(esc)
+	check(not menu._help_modal.visible, "Esc closes")
+
+	menu._help_button.pressed.emit()
+	var click := InputEventMouseButton.new()
+	click.button_index = MOUSE_BUTTON_LEFT
+	click.pressed = true
+	menu._help_modal.gui_input.emit(click)
+	check(not menu._help_modal.visible, "click outside closes")
+	menu.queue_free()
+
+
+func test_settings_label_uses_only_pixel_font_glyphs() -> void:
+	var menu := await _open_menu()
+	var font: FontFile = UiKit.PIXEL_FONT
+	for c in menu._settings_button.text:
+		check(c == " " or font.has_char(c.unicode_at(0)), "glyph '%s' exists" % c)
+	menu.queue_free()

@@ -16,6 +16,9 @@ var _online_panel: Control
 var _online_button: Button
 var _practice_button: Button
 var _settings_button: Button
+var _help_button: Button
+var _help_modal: Control
+var _help_close_button: Button
 var _back_button: Button
 var _name_edit: LineEdit
 var _code_edit: LineEdit
@@ -70,6 +73,7 @@ func _build_ui() -> void:
 	_status.add_theme_constant_override("outline_size", 6)
 	layout.add_child(_status)
 	layout.add_child(UiKit.label("WASD move  ·  Shift sprint  ·  Hold Space shoot  ·  I pass", 14, UiKit.MUTED))
+	_help_modal = _build_help_modal()
 
 
 func _build_home() -> VBoxContainer:
@@ -78,8 +82,10 @@ func _build_home() -> VBoxContainer:
 	home.add_theme_constant_override("separation", 14)
 	_online_button = _big_button("Play online", _show_online, UiKit.Style.PRIMARY)
 	_practice_button = _big_button("Practice", _on_practice_pressed, UiKit.Style.ACCENT)
-	_settings_button = _big_button("Settings  ·  soon", _on_settings_pressed, UiKit.Style.GHOST)
-	for button in [_online_button, _practice_button, _settings_button]:
+	_help_button = _big_button("How to play", _show_help, UiKit.Style.GHOST)
+	# The pixel font has no "·", so stick to letters, spaces and brackets.
+	_settings_button = _big_button("Settings (soon)", _on_settings_pressed, UiKit.Style.GHOST)
+	for button in [_online_button, _practice_button, _help_button, _settings_button]:
 		home.add_child(button)
 	return home
 
@@ -110,6 +116,87 @@ func _build_online_panel(parent: Control) -> Control:
 	card.add_child(_back_button)
 	# card() returns the column inside the panel; show/hide the panel itself.
 	return card.get_parent()
+
+
+## Dimmed full-screen overlay with the controls and rules. Closes with
+## Got it, Esc, or a click outside the panel.
+func _build_help_modal() -> Control:
+	var modal := ColorRect.new()
+	modal.color = Color(0, 0, 0, 0.72)
+	modal.set_anchors_preset(Control.PRESET_FULL_RECT)
+	modal.mouse_filter = Control.MOUSE_FILTER_STOP
+	modal.gui_input.connect(_on_help_backdrop_input)
+	add_child(modal)
+	var center := CenterContainer.new()
+	center.set_anchors_preset(Control.PRESET_FULL_RECT)
+	center.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	modal.add_child(center)
+
+	var card := UiKit.card(center, 660)
+	card.add_child(UiKit.title("HOW TO PLAY", 36, UiKit.GOLD))
+	card.add_child(UiKit.caption("Controls"))
+	var controls := GridContainer.new()
+	controls.columns = 2
+	controls.add_theme_constant_override("h_separation", 20)
+	controls.add_theme_constant_override("v_separation", 10)
+	for row in [
+		[["W", "A", "S", "D"], "Move  (or the arrow keys)"],
+		[["SHIFT"], "Sprint  -  uses stamina"],
+		[["SPACE"], "Hold, then release to shoot  -  hold longer for a harder shot"],
+		[["I"], "Pass  -  stops at the first player it reaches"],
+		[["ESC"], "Leave the match"],
+	]:
+		var keys := HBoxContainer.new()
+		keys.add_theme_constant_override("separation", 4)
+		for key in row[0]:
+			keys.add_child(UiKit.key_cap(key))
+		controls.add_child(keys)
+		var what := UiKit.label(row[1], 16)
+		what.horizontal_alignment = HORIZONTAL_ALIGNMENT_LEFT
+		what.autowrap_mode = TextServer.AUTOWRAP_OFF
+		controls.add_child(what)
+	card.add_child(controls)
+
+	for section in [
+		["Rules", [
+			"Score in the other team's goal  -  own goals count for them.",
+			"Matches last 5 minutes. Most goals wins.",
+		]],
+		["Play online", [
+			"Create a room and share its 4-letter code.",
+			"Friends join, pick Blue or Red, then the host presses Start.",
+		]],
+	]:
+		card.add_child(UiKit.caption(section[0]))
+		for line in section[1]:
+			var bullet := UiKit.label("•  " + line, 16)
+			bullet.horizontal_alignment = HORIZONTAL_ALIGNMENT_LEFT
+			card.add_child(bullet)
+
+	_help_close_button = UiKit.button("Got it", _hide_help, UiKit.Style.PRIMARY)
+	card.add_child(_help_close_button)
+	modal.hide()
+	return modal
+
+
+func _show_help() -> void:
+	_help_modal.show()
+	_help_close_button.grab_focus()
+
+
+func _hide_help() -> void:
+	_help_modal.hide()
+
+
+func _on_help_backdrop_input(event: InputEvent) -> void:
+	if event is InputEventMouseButton and event.pressed:
+		_hide_help()
+
+
+func _unhandled_input(event: InputEvent) -> void:
+	if _help_modal.visible and event.is_action_pressed("ui_cancel"):
+		_hide_help()
+		get_viewport().set_input_as_handled()
 
 
 func _big_button(text: String, on_pressed: Callable, style: UiKit.Style) -> Button:

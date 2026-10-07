@@ -1,8 +1,9 @@
 class_name UiKit
 extends RefCounted
 
-## Shared look for the code-built menu and lobby: the real pitch as a darkened
-## backdrop, a pixel-font title, frosted cards, and buttons coloured by team.
+## Shared 8-bit look for the code-built menu and lobby: pixel-font text,
+## chunky outlined boxes with chamfered corners and a thick bottom edge (so
+## buttons read as raised blocks), and buttons coloured by team.
 
 const PIXEL_FONT := preload("res://assets/field/font/plumppixel.ttf")
 ## Loaded at runtime (not preloaded) so the headless server, which ships
@@ -18,6 +19,14 @@ const GOLD := Color(1.0, 0.8, 0.25)
 const TEXT := Color(0.96, 0.97, 0.95)
 const MUTED := Color(0.78, 0.84, 0.8, 0.75)
 const HIGHLIGHT := Color(1.0, 0.85, 0.3)
+
+## Pixel box geometry: outline width, extra bottom edge ("depth"), and the
+## size of the 45° corner cut.
+const EDGE := 3
+const DEPTH := 4
+const CHAMFER := 4
+## Near-black outline used by every pixel box.
+const OUTLINE := Color(0.04, 0.04, 0.07)
 
 ## How far and how slowly the menu artwork drifts.
 const DRIFT_PIXELS := 40.0
@@ -88,17 +97,16 @@ static func artwork_backdrop(owner: Control, texture: Texture2D) -> void:
 	owner.add_child(shade)
 
 
-## Frosted rounded panel; returns the column inside it. `accent` tints the
-## border (team cards in the lobby).
-static func card(parent: Control, width: float, accent: Color = Color(1, 1, 1, 0.14)) -> VBoxContainer:
+## Dark pixel panel; returns the column inside it. `accent` colours the
+## outline (team cards in the lobby).
+static func card(parent: Control, width: float, accent: Color = OUTLINE) -> VBoxContainer:
 	var panel := PanelContainer.new()
 	panel.custom_minimum_size = Vector2(width, 0)
-	var style := _box(Color(0.03, 0.07, 0.05, 0.82), 14, accent, 2)
+	var style := _pixel_box(Color(0.03, 0.07, 0.05, 0.9), accent if accent.a > 0.5 else OUTLINE, DEPTH + 2)
 	style.set_content_margin_all(24)
-	style.shadow_color = Color(0, 0, 0, 0.45)
-	style.shadow_size = 18
-	style.shadow_offset = Vector2(0, 6)
 	panel.add_theme_stylebox_override("panel", style)
+	# Clicks on the panel stay on it (a modal's backdrop closes on outside clicks).
+	panel.mouse_filter = Control.MOUSE_FILTER_STOP
 	parent.add_child(panel)
 	var column := VBoxContainer.new()
 	column.add_theme_constant_override("separation", 12)
@@ -147,15 +155,17 @@ static func button(text: String, on_pressed: Callable, style: Style = Style.PRIM
 	result.add_theme_color_override("font_disabled_color", Color(TEXT, 0.4))
 
 	var base: Color = {
-		Style.PRIMARY: BLUE, Style.DANGER: RED, Style.SUCCESS: GREEN, Style.GHOST: Color(1, 1, 1, 0.06),
-		Style.ACCENT: ORANGE,
+		Style.PRIMARY: BLUE, Style.DANGER: RED, Style.SUCCESS: GREEN,
+		Style.GHOST: Color(0.05, 0.07, 0.1, 0.78), Style.ACCENT: ORANGE,
 	}[style]
-	var border := Color(1, 1, 1, 0.28) if style == Style.GHOST else base.lightened(0.25)
-	result.add_theme_stylebox_override("normal", _box(base, 10, border, 2))
-	result.add_theme_stylebox_override("hover", _box(base.lightened(0.15), 10, Color(1, 1, 1, 0.6), 2))
-	result.add_theme_stylebox_override("pressed", _box(base.darkened(0.2), 10, border, 2))
-	result.add_theme_stylebox_override("disabled", _box(Color(base, base.a * 0.4), 10, Color(border, 0.2), 2))
-	result.add_theme_stylebox_override("focus", _box(Color.TRANSPARENT, 10, Color(1, 1, 1, 0.8), 2))
+	result.add_theme_stylebox_override("normal", _pixel_box(base, OUTLINE, DEPTH))
+	result.add_theme_stylebox_override("hover", _pixel_box(base.lightened(0.18), OUTLINE, DEPTH))
+	# Pressed: the thick bottom edge goes away and the label drops into it.
+	var pressed := _pixel_box(base.darkened(0.15), OUTLINE, 0)
+	pressed.content_margin_top += DEPTH
+	result.add_theme_stylebox_override("pressed", pressed)
+	result.add_theme_stylebox_override("disabled", _pixel_box(Color(base, base.a * 0.45), Color(OUTLINE, 0.6), DEPTH))
+	result.add_theme_stylebox_override("focus", _pixel_box(Color.TRANSPARENT, HIGHLIGHT, 0))
 	result.pressed.connect(on_pressed)
 	return result
 
@@ -169,10 +179,10 @@ static func line_edit(placeholder: String, max_length: int) -> LineEdit:
 	result.add_theme_color_override("font_color", TEXT)
 	result.add_theme_color_override("font_placeholder_color", Color(TEXT, 0.35))
 	result.add_theme_color_override("caret_color", HIGHLIGHT)
-	var normal := _box(Color(0, 0, 0, 0.35), 10, Color(1, 1, 1, 0.16), 2)
+	var normal := _pixel_box(Color(0, 0, 0, 0.55), OUTLINE, 0)
 	normal.content_margin_left = 14
 	normal.content_margin_right = 14
-	var focus := normal.duplicate()
+	var focus: StyleBoxFlat = normal.duplicate()
 	focus.border_color = HIGHLIGHT
 	result.add_theme_stylebox_override("normal", normal)
 	result.add_theme_stylebox_override("focus", focus)
@@ -207,12 +217,36 @@ static func footer(owner: Control, text: String) -> Label:
 	return hint
 
 
-static func _box(color: Color, radius: int, border: Color, border_width: int) -> StyleBoxFlat:
+## A keyboard key drawn as a small light pixel block, e.g. [SPACE].
+static func key_cap(text: String) -> PanelContainer:
+	var cap := PanelContainer.new()
+	var style := _pixel_box(Color(0.92, 0.92, 0.86), OUTLINE, DEPTH)
+	# Margins include the outline, so the thick bottom edge never covers the text.
+	style.content_margin_left = EDGE + 8
+	style.content_margin_right = EDGE + 8
+	style.content_margin_top = EDGE + 4
+	style.content_margin_bottom = EDGE + DEPTH + 3
+	cap.add_theme_stylebox_override("panel", style)
+	var letters := Label.new()
+	letters.text = text
+	letters.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	letters.add_theme_font_override("font", PIXEL_FONT)
+	letters.add_theme_font_size_override("font_size", 16)
+	letters.add_theme_color_override("font_color", OUTLINE)
+	cap.add_child(letters)
+	return cap
+
+
+## Chunky 8-bit box: hard outline, 45° corner cuts, no smoothing, and a
+## thicker bottom edge (`depth`) so it reads as a raised block.
+static func _pixel_box(fill: Color, outline: Color, depth: int) -> StyleBoxFlat:
 	var box := StyleBoxFlat.new()
-	box.bg_color = color
-	box.set_corner_radius_all(radius)
-	box.border_color = border
-	box.set_border_width_all(border_width)
+	box.bg_color = fill
+	box.border_color = outline
+	box.set_border_width_all(EDGE)
+	box.border_width_bottom = EDGE + depth
+	box.set_corner_radius_all(CHAMFER)
+	box.corner_detail = 1
+	box.anti_aliasing = false
 	box.set_content_margin_all(8)
-	box.anti_aliasing = true
 	return box

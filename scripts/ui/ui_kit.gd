@@ -242,6 +242,28 @@ static func color_chip(color: Color, size: int) -> ImageTexture:
 	return ImageTexture.create_from_image(image)
 
 
+## Pixel slider: dark track, gold fill, and a light square grabber.
+static func slider(min_value: float, max_value: float, step: float) -> HSlider:
+	var result := HSlider.new()
+	result.min_value = min_value
+	result.max_value = max_value
+	result.step = step
+	result.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	result.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	result.custom_minimum_size = Vector2(0, 28)
+	var track := _pixel_box(Color(0, 0, 0, 0.55), OUTLINE, 0)
+	track.content_margin_top = 6
+	track.content_margin_bottom = 6
+	result.add_theme_stylebox_override("slider", track)
+	var filled := _pixel_box(GOLD, OUTLINE, 0)
+	result.add_theme_stylebox_override("grabber_area", filled)
+	result.add_theme_stylebox_override("grabber_area_highlight", filled)
+	var grabber := color_chip(Color(0.95, 0.95, 0.9), 22)
+	result.add_theme_icon_override("grabber", grabber)
+	result.add_theme_icon_override("grabber_highlight", grabber)
+	return result
+
+
 ## Pixel stat bar for a 1–99 value.
 static func stat_bar(value: int, fill: Color) -> ProgressBar:
 	var bar := ProgressBar.new()

@@ -35,11 +35,12 @@ func test_play_online_opens_panel_and_back_returns() -> void:
 	menu.queue_free()
 
 
-func test_settings_is_coming_soon() -> void:
+func test_settings_opens_the_settings_panel() -> void:
 	var menu := await _open_menu()
 	menu._settings_button.pressed.emit()
-	check_eq(menu._status.text, "Settings are coming soon", "message")
-	check(menu._home.visible, "stays on home")
+	check(menu._settings_panel.visible, "panel open")
+	check(menu._home.visible, "menu stays underneath")
+	menu._settings_panel.close()
 	menu.queue_free()
 
 

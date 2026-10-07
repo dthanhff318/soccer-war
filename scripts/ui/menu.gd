@@ -26,6 +26,7 @@ var _help_button: Button
 var _characters_button: Button
 var _help_modal: Control
 var _help_close_button: Button
+var _settings_panel: SettingsPanel
 var _back_button: Button
 var _name_edit: LineEdit
 var _code_edit: LineEdit
@@ -84,6 +85,8 @@ func _build_ui() -> void:
 	layout.add_child(_status)
 	layout.add_child(UiKit.label("WASD move  ·  Shift sprint  ·  Hold Space shoot  ·  I pass", 14, UiKit.MUTED))
 	_help_modal = _build_help_modal()
+	_settings_panel = SettingsPanel.new()
+	add_child(_settings_panel)
 
 
 func _build_home() -> VBoxContainer:
@@ -94,8 +97,7 @@ func _build_home() -> VBoxContainer:
 	_practice_button = _big_button("Practice", _show_practice, UiKit.Style.ACCENT)
 	_characters_button = _big_button("Characters", _on_characters_pressed, UiKit.Style.GHOST)
 	_help_button = _big_button("How to play", _show_help, UiKit.Style.GHOST)
-	# The pixel font has no "·", so stick to letters, spaces and brackets.
-	_settings_button = _big_button("Settings (soon)", _on_settings_pressed, UiKit.Style.GHOST)
+	_settings_button = _big_button("Settings", _on_settings_pressed, UiKit.Style.GHOST)
 	for button in [_online_button, _practice_button, _characters_button, _help_button, _settings_button]:
 		home.add_child(button)
 	return home
@@ -155,7 +157,7 @@ func _build_help_modal() -> Control:
 		[["SHIFT"], "Sprint  -  uses stamina"],
 		[["SPACE"], "Hold, then release to shoot  -  hold longer for a harder shot"],
 		[["I"], "Pass  -  stops at the first player it reaches"],
-		[["ESC"], "Leave the match"],
+		[["ESC"], "Settings  -  pauses practice"],
 	]:
 		var keys := HBoxContainer.new()
 		keys.add_theme_constant_override("separation", 4)
@@ -258,7 +260,7 @@ func _show_home() -> void:
 
 
 func _on_settings_pressed() -> void:
-	_status.text = "Settings are coming soon"
+	_settings_panel.open()
 
 
 func _on_create_pressed() -> void:

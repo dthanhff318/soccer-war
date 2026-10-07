@@ -32,6 +32,8 @@ var _buffer := SnapshotBuffer.new()
 var _pending_state: Dictionary = {}
 var _leaving: bool = false
 var _audio: MatchAudio
+var _settings_button: Button
+var _settings_panel: SettingsPanel
 
 @onready var _ball: Ball = $Ball
 @onready var _scoreboard: Scoreboard = $UI/Scoreboard
@@ -50,6 +52,8 @@ func _ready() -> void:
 		_setup_online()
 	else:
 		_setup_offline()
+	# An online match keeps running on the server, so only practice pauses.
+	_build_settings(not _online)
 
 
 func _setup_offline() -> void:
@@ -125,9 +129,35 @@ func _setup_online() -> void:
 
 func _unhandled_input(event: InputEvent) -> void:
 	if event.is_action_pressed("ui_cancel"):
-		if _online:
-			Net.leave()
-		_leave_to(MENU_SCENE)
+		_open_settings()
+
+
+func _quit_to_menu() -> void:
+	if _online:
+		Net.leave()
+	_leave_to(MENU_SCENE)
+
+## Settings button (top right) and overlay; Esc opens it too.
+func _build_settings(pauses: bool) -> void:
+	var layer := CanvasLayer.new()
+	layer.layer = 10
+	add_child(layer)
+	_settings_button = UiKit.button("Settings", _open_settings, UiKit.Style.GHOST)
+	_settings_button.add_theme_font_size_override("font_size", 16)
+	_settings_button.custom_minimum_size = Vector2(150, 36)
+	_settings_button.position = Vector2(1116, 10)
+	_settings_button.focus_mode = Control.FOCUS_NONE
+	layer.add_child(_settings_button)
+	_settings_panel = SettingsPanel.new()
+	_settings_panel.configure(true, pauses)
+	_settings_panel.quit_requested.connect(_quit_to_menu)
+	layer.add_child(_settings_panel)
+
+
+func _open_settings() -> void:
+	if not _settings_panel.visible:
+		_settings_panel.open()
+
 
 
 func _physics_process(delta: float) -> void:

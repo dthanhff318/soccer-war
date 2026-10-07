@@ -18,6 +18,9 @@ func _init() -> void:
 	name = "MatchAudio"
 	crowd.stream = CROWD  # loops (set in its .import)
 	crowd.volume_db = CROWD_VOLUME_DB
+	# The "Music" setting mutes this bus; the cheer stays on Master.
+	GameSettings.ensure_music_bus()
+	crowd.bus = GameSettings.MUSIC_BUS
 	cheer.stream = CHEER
 	cheer.volume_db = CHEER_VOLUME_DB
 	add_child(crowd)

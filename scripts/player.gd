@@ -15,9 +15,13 @@ signal stamina_changed(current: float, maximum: float, exhausted: bool)
 @export var sprint_speed: float = 220.0
 @export var acceleration: float = 2400.0
 @export var friction: float = 1800.0
-@export var kick_strength: float = 700.0
-## Speed of a pass (I key): softer than a kick, along the running direction.
-@export var pass_strength: float = 420.0
+## Ball speed of a kick: holding Space charges it from min to max.
+@export var min_kick_speed: float = 300.0
+@export var max_kick_speed: float = 650.0
+## Seconds of holding Space to reach max_kick_speed.
+@export var kick_charge_time: float = 1.5
+## Speed of a pass (I key), aimed like a kick.
+@export var pass_strength: float = 250.0
 @export var kick_radius: float = 38.4
 ## Offline play: read the keyboard every physics tick. Online, the server
 ## room and the client Predictor call simulate() instead.
@@ -38,6 +42,7 @@ const RING_RADIUS := 18.0
 const NAME_FONT_SIZE := 12
 ## How quickly a smoothed prediction correction fades, per second.
 const OFFSET_DECAY := 15.0
+const POWER_BAR_SIZE := Vector2(36, 5)
 
 var stamina: float
 ## True after stamina hit zero; prevents stutter-sprinting on an empty bar.
@@ -49,6 +54,9 @@ var is_local: bool = false
 ## Draw offset that hides small prediction corrections; decays to zero.
 var visual_offset: Vector2 = Vector2.ZERO
 var _regen_cooldown: float = 0.0
+## Seconds Space has been held for the coming kick (0 when not charging).
+var kick_charge: float = 0.0
+var _kick_held: bool = false
 
 ## Last non-zero movement direction, used to aim kicks while standing still.
 var _facing: Vector2 = Vector2.RIGHT
@@ -73,11 +81,13 @@ func _process(delta: float) -> void:
 
 func _physics_process(delta: float) -> void:
 	if keyboard_control:
-		simulate(Protocol.keyboard_bits(Input.is_action_just_pressed("kick"), Input.is_action_just_pressed("pass")), delta)
+		simulate(Protocol.keyboard_bits(Input.is_action_just_pressed("pass")), delta)
 
 
 ## Advances the player one physics step using `bits` (Protocol.IN_*).
-func simulate(bits: int, delta: float) -> void:
+## `replay` is set when the Predictor re-runs inputs already applied once:
+## only movement and stamina are redone, never charging, kicks or passes.
+func simulate(bits: int, delta: float, replay: bool = false) -> void:
 	var input_dir := Protocol.input_vector(bits)
 	var wants_sprint := (bits & Protocol.IN_SPRINT) != 0
 	var sprinting := _update_stamina(input_dir != Vector2.ZERO, wants_sprint, delta)
@@ -94,10 +104,16 @@ func simulate(bits: int, delta: float) -> void:
 	move_and_slide()
 	_push_touched_balls(speed_before_move)
 
-	if bits & Protocol.IN_KICK:
-		_try_kick()
-	elif bits & Protocol.IN_PASS:
+	if replay:
+		return
+	_update_kick((bits & Protocol.IN_KICK) != 0, delta)
+	if bits & Protocol.IN_PASS:
 		_try_pass()
+
+
+## Ball speed a kick released now would have.
+func kick_power() -> float:
+	return lerpf(min_kick_speed, max_kick_speed, clampf(kick_charge / kick_charge_time, 0.0, 1.0))
 
 
 ## Everything the server sends for this player in a snapshot.
@@ -156,11 +172,24 @@ func _push_touched_balls(speed: float) -> void:
 			ball.push(-collision.get_normal(), speed)
 
 
-## Applies an impulse to every ball currently overlapping the kick area.
+## Charges while Space is held; kicks on the tick it is released.
+func _update_kick(held: bool, delta: float) -> void:
+	if held:
+		kick_charge = minf(kick_charge + delta, kick_charge_time)
+		_kick_held = true
+		queue_redraw()
+	elif _kick_held:
+		_kick_held = false
+		_try_kick()
+		kick_charge = 0.0
+		queue_redraw()
+
+
+## Kicks every ball currently overlapping the kick area at the charged power.
 func _try_kick() -> void:
 	for body in _kick_area.get_overlapping_bodies():
 		if body is Ball:
-			body.kick(_strike_direction(body) * kick_strength)
+			body.kick(_strike_direction(body) * kick_power())
 
 
 ## Passes every ball within reach, aimed the same way as a kick.
@@ -182,8 +211,21 @@ func _draw() -> void:
 	draw_arc(visual_offset, RING_RADIUS, 0.0, TAU, 32, MatchRules.TEAM_COLORS[team], 3.0, true)
 	if is_local:
 		draw_arc(visual_offset, RING_RADIUS + 3.0, 0.0, TAU, 32, Color.WHITE, 1.5, true)
+	if is_local and _kick_held:
+		_draw_power_bar()
 	if not display_name.is_empty():
 		var font := ThemeDB.fallback_font
 		var width := font.get_string_size(display_name, HORIZONTAL_ALIGNMENT_LEFT, -1, NAME_FONT_SIZE).x
 		var baseline := visual_offset + Vector2(-width / 2.0, -RING_RADIUS - 8.0)
 		draw_string(font, baseline, display_name, HORIZONTAL_ALIGNMENT_LEFT, -1, NAME_FONT_SIZE, Color.WHITE)
+
+
+## Charge bar above the head while Space is held: yellow, turning red when full.
+func _draw_power_bar() -> void:
+	var ratio := clampf(kick_charge / kick_charge_time, 0.0, 1.0)
+	var top_left := visual_offset + Vector2(-POWER_BAR_SIZE.x / 2.0, -RING_RADIUS - 34.0)
+	var frame := Rect2(top_left, POWER_BAR_SIZE)
+	draw_rect(frame, Color(0, 0, 0, 0.6))
+	var fill := Color(1.0, 0.85, 0.2).lerp(Color(0.95, 0.2, 0.15), ratio)
+	draw_rect(Rect2(top_left, Vector2(POWER_BAR_SIZE.x * ratio, POWER_BAR_SIZE.y)), fill)
+	draw_rect(frame, Color.WHITE, false, 1.0)

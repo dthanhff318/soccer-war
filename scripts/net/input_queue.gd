@@ -4,13 +4,14 @@ extends RefCounted
 ## Server-side buffer of one player's inputs. Exactly one input is simulated
 ## per tick, so sending faster never moves a player faster.
 ##
-## - Starved (nothing queued): the last movement repeats, without the kick,
-##   for up to MAX_REPEAT ticks; after that the player stands still.
+## - Starved (nothing queued): the last movement repeats, without the pass,
+##   for up to MAX_REPEAT ticks; after that the player stands still (a held
+##   kick stays held, so a stall never fires it).
 ## - Each repeated tick stood in for an input that is still on its way; when
 ##   that input arrives it is acknowledged but not simulated again.
 ## - More than MAX_BACKLOG queued: the oldest are skipped the same way, so a
 ##   burst never leaves a standing delay.
-## Skipped inputs pass their kick or pass on to the next input, so none is lost.
+## Skipped inputs hand their pass on to the next input, so none is lost.
 
 const MAX_BACKLOG := 2
 const MAX_REPEAT := 6
@@ -42,7 +43,10 @@ func take() -> int:
 	if _queue.is_empty():
 		_debt = mini(_debt + 1, MAX_DEBT)
 		_starved_ticks += 1
-		return _last_bits & ~Protocol.IN_ONE_SHOT if _starved_ticks <= MAX_REPEAT else 0
+		if _starved_ticks <= MAX_REPEAT:
+			return _last_bits & ~Protocol.IN_ONE_SHOT
+		# Stop moving, but keep a held kick held: a stall is not a release.
+		return _last_bits & Protocol.IN_KICK
 	_starved_ticks = 0
 	var entry: Vector2i = _queue.pop_front()
 	last_seq = entry.x

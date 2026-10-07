@@ -77,9 +77,10 @@ func show_at(pos: Vector2) -> void:
 	position = pos
 
 
-## Adds an impulse to the ball, clamped to max_speed on the next frame.
+## Shoots the ball exactly along `impulse`: its length is the final speed,
+## whatever the ball was doing before.
 func kick(impulse: Vector2) -> void:
-	velocity += impulse
+	velocity = impulse
 	is_pass = false
 
 

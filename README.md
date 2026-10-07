@@ -20,7 +20,8 @@ Play offline, or online with friends: 3v3 up to 4v4, joined by room code, 5-minu
 |--------|------|
 | Move   | `WASD` or arrow keys |
 | Sprint | `Shift` |
-| Kick   | `Space` |
+| Shoot  | hold `Space`, release to kick (longer hold = harder shot) |
+| Pass   | `I` |
 | Menu   | `Esc` |
 
 ## Exporting for web

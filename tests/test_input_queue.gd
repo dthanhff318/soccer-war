@@ -3,6 +3,7 @@ extends TestCase
 const R := Protocol.IN_RIGHT
 const L := Protocol.IN_LEFT
 const KICK := Protocol.IN_KICK
+const PASS := Protocol.IN_PASS
 
 
 func test_empty_queue_before_any_input_stands_still() -> void:
@@ -67,22 +68,32 @@ func test_inputs_covered_by_repeats_are_skipped_when_they_arrive() -> void:
 	check_eq(queue.last_seq, 4, "late inputs acknowledged")
 
 
-func test_skipped_input_keeps_its_kick() -> void:
+func test_skipped_input_keeps_its_pass() -> void:
 	var queue := InputQueue.new()
 	queue.push(1, R)
 	queue.take()
 	queue.take()
-	queue.push(2, R | KICK)
+	queue.push(2, R | PASS)
 	queue.push(3, R)
-	check_eq(queue.take(), R | KICK, "kick carried into the simulated input")
+	check_eq(queue.take(), R | PASS, "pass carried into the simulated input")
 
 
 func test_repeat_stops_after_a_few_ticks() -> void:
 	var queue := InputQueue.new()
-	queue.push(1, R | Protocol.IN_SPRINT | KICK)
+	queue.push(1, R | Protocol.IN_SPRINT | PASS)
 	queue.take()
-	check_eq(queue.take(), R | Protocol.IN_SPRINT, "repeat without kick")
+	check_eq(queue.take(), R | Protocol.IN_SPRINT, "repeat without pass")
 	for i in InputQueue.MAX_REPEAT:
 		queue.take()
 	check_eq(queue.take(), 0, "silent client stops moving")
 	check_eq(queue.last_seq, 1, "repeats do not ack")
+
+
+func test_held_kick_survives_starvation_so_a_stall_is_not_a_release() -> void:
+	var queue := InputQueue.new()
+	queue.push(1, R | KICK)
+	queue.take()
+	check_eq(queue.take(), R | KICK, "still holding while repeating")
+	for i in InputQueue.MAX_REPEAT + 5:
+		queue.take()
+	check_eq(queue.take(), KICK, "stops moving but keeps holding")

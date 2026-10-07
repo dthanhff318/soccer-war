@@ -5,11 +5,13 @@ extends Control
 
 const MENU_SCENE := "res://scenes/menu.tscn"
 const MATCH_SCENE := "res://scenes/main.tscn"
+const COPY_FEEDBACK_SECONDS := 1.5
 
 var _code_label: Label
 ## One name list per team, indexed by Roster.Team.
 var _team_lists: Array[VBoxContainer] = []
 var _start_button: Button
+var _copy_button: Button
 var _status: Label
 var _leaving: bool = false
 
@@ -32,7 +34,16 @@ func _build_ui() -> void:
 	column.add_child(UiKit.label("ROOM CODE", 14, UiKit.MUTED))
 	_code_label = UiKit.title("", 64, UiKit.HIGHLIGHT)
 	column.add_child(_code_label)
-	column.add_child(UiKit.label("Share this code with your friends", 14, UiKit.MUTED))
+	var share_row := HBoxContainer.new()
+	share_row.alignment = BoxContainer.ALIGNMENT_CENTER
+	share_row.add_theme_constant_override("separation", 12)
+	var share_hint := UiKit.label("Share this code with your friends", 14, UiKit.MUTED)
+	share_hint.autowrap_mode = TextServer.AUTOWRAP_OFF
+	share_row.add_child(share_hint)
+	_copy_button = UiKit.button("Copy", _on_copy_pressed, UiKit.Style.GHOST)
+	_copy_button.custom_minimum_size = Vector2(120, 36)
+	share_row.add_child(_copy_button)
+	column.add_child(share_row)
 
 	var teams := HBoxContainer.new()
 	teams.alignment = BoxContainer.ALIGNMENT_CENTER
@@ -83,6 +94,14 @@ func _refresh(state: Dictionary) -> void:
 	var is_host: bool = state.host_id == Net.my_id()
 	_start_button.visible = is_host
 	_status.text = "" if is_host else "Waiting for the host to start…"
+
+
+func _on_copy_pressed() -> void:
+	DisplayServer.clipboard_set(str(Net.current_room.get("code", "")))
+	_copy_button.text = "COPIED!"
+	await get_tree().create_timer(COPY_FEEDBACK_SECONDS).timeout
+	if is_instance_valid(_copy_button):
+		_copy_button.text = "COPY"
 
 
 func _on_team_pressed(team: int) -> void:

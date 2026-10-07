@@ -31,6 +31,7 @@ var _buffer := SnapshotBuffer.new()
 ## tick (replaying inputs must happen inside _physics_process).
 var _pending_state: Dictionary = {}
 var _leaving: bool = false
+var _audio: MatchAudio
 
 @onready var _ball: Ball = $Ball
 @onready var _scoreboard: Scoreboard = $UI/Scoreboard
@@ -42,6 +43,8 @@ var _leaving: bool = false
 
 func _ready() -> void:
 	_result.hide()
+	_audio = MatchAudio.new()
+	add_child(_audio)
 	_online = Net.is_online() and not Net.current_room.is_empty()
 	if _online:
 		_setup_online()
@@ -170,6 +173,7 @@ func _on_snapshot(snap: Dictionary) -> void:
 
 func _on_goal_scored(_team: int) -> void:
 	_goal_banner.play()
+	_audio.play_goal()
 
 
 func _on_match_ended(score_left: int, score_right: int) -> void:
@@ -218,6 +222,7 @@ func _on_offline_goal(team: int) -> void:
 	score[team] += 1
 	_scoreboard.set_score(score[Roster.Team.LEFT], score[Roster.Team.RIGHT])
 	_goal_banner.play()
+	_audio.play_goal()
 
 	await get_tree().create_timer(MatchRules.CELEBRATION_SECONDS, false, true).timeout
 	# The keeper drill puts the ball where it wants it for the next shot.

@@ -48,6 +48,7 @@ var _dot_rows: Array[HBoxContainer] = []
 var _round_label: Label
 var _role_label: Label
 var _leaving: bool = false
+var _audio: MatchAudio
 
 
 func _ready() -> void:
@@ -63,6 +64,8 @@ func _ready() -> void:
 	CharacterStats.apply(blue, character)
 	red = _spawn(Roster.Team.RIGHT, "AI")
 	_build_hud()
+	_audio = MatchAudio.new()
+	add_child(_audio)
 
 
 func shooter() -> Player:
@@ -165,6 +168,8 @@ func _lock_to_line(goalie: Player) -> void:
 func _resolve(scored: bool, text: String) -> void:
 	rules.record(shooter().team, scored)
 	_refresh_score()
+	if scored:
+		_audio.play_goal()
 	banner.text = text
 	banner.add_theme_color_override("font_color", UiKit.GOLD if scored else UiKit.TEXT)
 	banner.show()

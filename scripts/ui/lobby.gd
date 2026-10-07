@@ -49,15 +49,15 @@ func _build_ui() -> void:
 	teams.alignment = BoxContainer.ALIGNMENT_CENTER
 	teams.add_theme_constant_override("separation", 24)
 	for team in [Roster.Team.LEFT, Roster.Team.RIGHT]:
-		var team_card := UiKit.card(teams, 280, MatchRules.TEAM_COLORS[team])
-		team_card.add_child(UiKit.title(MatchRules.TEAM_NAMES[team], 28, MatchRules.TEAM_COLORS[team]))
+		var team_card := UiKit.card(teams, 280, Teams.color_of(team))
+		team_card.add_child(UiKit.title(Teams.name_of(team), 28, Teams.color_of(team)))
 		var names := VBoxContainer.new()
 		names.custom_minimum_size = Vector2(0, Roster.MAX_PER_TEAM * 30)
 		names.add_theme_constant_override("separation", 6)
 		team_card.add_child(names)
 		_team_lists.append(names)
 		var style := UiKit.Style.PRIMARY if team == Roster.Team.LEFT else UiKit.Style.DANGER
-		team_card.add_child(UiKit.button("Join " + MatchRules.TEAM_NAMES[team], _on_team_pressed.bind(team), style))
+		team_card.add_child(UiKit.button("Join " + Teams.name_of(team), _on_team_pressed.bind(team), style))
 	column.add_child(teams)
 
 	var actions := HBoxContainer.new()

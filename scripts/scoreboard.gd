@@ -7,8 +7,6 @@ extends Control
 @export var font: Font
 @export var home_name: String = "HOME"
 @export var away_name: String = "AWAY"
-@export var home_color: Color = Color(0.2, 0.35, 1.0)
-@export var away_color: Color = Color(0.95, 0.25, 0.25)
 @export var led_on: Color = Color(1.0, 0.62, 0.12)
 @export var led_off: Color = Color(0.09, 0.05, 0.025)
 @export var blink_duration: float = 1.6
@@ -81,8 +79,8 @@ func _draw() -> void:
 	var left_window := Rect2(Vector2(side_margin, row_top), window_size)
 	var right_window := Rect2(Vector2(size.x - side_margin - window_size.x, row_top), window_size)
 
-	_draw_team_label(home_name, home_color, left_window)
-	_draw_team_label(away_name, away_color, right_window)
+	_draw_team_label(home_name, Teams.color_of(Roster.Team.LEFT), left_window)
+	_draw_team_label(away_name, Teams.color_of(Roster.Team.RIGHT), right_window)
 
 	_draw_score(_score_left, left_window, window_padding, _is_blanked("left"))
 	_draw_score(_score_right, right_window, window_padding, _is_blanked("right"))

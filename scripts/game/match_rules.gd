@@ -16,10 +16,6 @@ const CELEBRATION_SECONDS := 2.5
 ## Final score is shown this long before everyone returns to the lobby.
 const RESULT_SECONDS := 5.0
 
-## Indexed by Roster.Team; LEFT matches the scoreboard's home colour.
-const TEAM_COLORS: Array[Color] = [Color(0.2, 0.35, 1.0), Color(0.95, 0.25, 0.25)]
-const TEAM_NAMES: Array[String] = ["BLUE", "RED"]
-
 ## Kickoff spots for the left team, by player count; the right team mirrors them.
 const FORMATIONS := [
 	[],
@@ -59,4 +55,4 @@ static func result_text(score_left: int, score_right: int) -> String:
 	if score_left == score_right:
 		return "DRAW"
 	var winner := Roster.Team.LEFT if score_left > score_right else Roster.Team.RIGHT
-	return "%s WINS" % TEAM_NAMES[winner]
+	return "%s WINS" % Teams.name_of(winner)

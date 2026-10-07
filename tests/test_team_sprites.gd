@@ -11,7 +11,7 @@ func test_each_team_gets_its_own_sprite() -> void:
 		player.team = team
 		add_child(player)
 		var sprite: Sprite2D = player.get_node("Sprite")
-		check_eq(sprite.texture, Player.TEAM_SPRITES[team], "team %d sprite" % team)
+		check_eq(sprite.texture, Teams.sprite_of(team), "team %d sprite" % team)
 		player.queue_free()
-	check(Player.TEAM_SPRITES[Roster.Team.LEFT] != Player.TEAM_SPRITES[Roster.Team.RIGHT], "teams differ")
+	check(Teams.sprite_of(Roster.Team.LEFT) != Teams.sprite_of(Roster.Team.RIGHT), "teams differ")
 	await get_tree().process_frame

@@ -43,11 +43,6 @@ const NAME_FONT_SIZE := 12
 ## How quickly a smoothed prediction correction fades, per second.
 const OFFSET_DECAY := 15.0
 const POWER_BAR_SIZE := Vector2(36, 5)
-## Shirt sprite per team, indexed by Roster.Team.
-const TEAM_SPRITES: Array[Texture2D] = [
-	preload("res://assets/field/player/18.png"),
-	preload("res://assets/field/player/6.png"),
-]
 
 var stamina: float
 ## True after stamina hit zero; prevents stutter-sprinting on an empty bar.
@@ -72,7 +67,7 @@ var _facing: Vector2 = Vector2.RIGHT
 
 func _ready() -> void:
 	stamina = max_stamina
-	_sprite.texture = TEAM_SPRITES[team]
+	_sprite.texture = Teams.sprite_of(team)
 
 
 func _process(delta: float) -> void:
@@ -214,7 +209,7 @@ func _strike_direction(ball: Ball) -> Vector2:
 
 ## Team ring under the sprite, plus the name above it in online play.
 func _draw() -> void:
-	draw_arc(visual_offset, RING_RADIUS, 0.0, TAU, 32, MatchRules.TEAM_COLORS[team], 3.0, true)
+	draw_arc(visual_offset, RING_RADIUS, 0.0, TAU, 32, Teams.color_of(team), 3.0, true)
 	if is_local:
 		draw_arc(visual_offset, RING_RADIUS + 3.0, 0.0, TAU, 32, Color.WHITE, 1.5, true)
 	if is_local and _kick_held:

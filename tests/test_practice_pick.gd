@@ -16,6 +16,7 @@ func _open_pick_screen() -> Node:
 	get_tree().change_scene_to_file(MENU_SCENE)
 	await wait_until(func(): return _current() == MENU_SCENE, 30)
 	get_tree().current_scene._practice_button.pressed.emit()
+	get_tree().current_scene._free_play_button.pressed.emit()
 	await wait_until(func(): return _current() == CHARACTERS_SCENE, 30)
 	return get_tree().current_scene
 
@@ -41,6 +42,7 @@ func _local(game: Node) -> Player:
 func _finish() -> void:
 	CharactersScreen.practice_character_id = CharactersScreen.DEFAULT_CHARACTER
 	CharactersScreen.pick_for_practice = false
+	CharactersScreen.practice_mode = CharactersScreen.MODE_FREE
 	get_tree().unload_current_scene()
 	await get_tree().process_frame
 

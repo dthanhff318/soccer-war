@@ -7,10 +7,15 @@ extends Control
 
 const MENU_SCENE := "res://scenes/menu.tscn"
 const MATCH_SCENE := "res://scenes/main.tscn"
+const PENALTY_SCENE := "res://scenes/penalty.tscn"
+const MODE_FREE := "free"
+const MODE_PENALTY := "penalty"
 const DEFAULT_CHARACTER := "captain"
 
 ## Set by the menu before opening this screen: true shows PLAY (Practice).
 static var pick_for_practice: bool = false
+## Which practice PLAY starts: MODE_FREE or MODE_PENALTY.
+static var practice_mode: String = MODE_FREE
 ## Who Practice plays as; remembered between visits.
 static var practice_character_id: String = DEFAULT_CHARACTER
 const ARTWORK := preload("res://assets/image/background.jpg")
@@ -160,7 +165,7 @@ func _on_back_pressed() -> void:
 ## Practice as the selected character.
 func _on_play_pressed() -> void:
 	practice_character_id = Characters.ALL[_selected].id
-	_leave_to(MATCH_SCENE)
+	_leave_to(PENALTY_SCENE if practice_mode == MODE_PENALTY else MATCH_SCENE)
 
 
 func _leave_to(path: String) -> void:

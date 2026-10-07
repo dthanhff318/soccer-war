@@ -16,6 +16,11 @@ var _home: VBoxContainer
 var _online_panel: Control
 var _online_button: Button
 var _practice_button: Button
+## Practice mode choice: FREE PLAY / PENALTY / BACK.
+var _practice_panel: VBoxContainer
+var _free_play_button: Button
+var _penalty_button: Button
+var _practice_back_button: Button
 var _settings_button: Button
 var _help_button: Button
 var _characters_button: Button
@@ -69,6 +74,9 @@ func _build_ui() -> void:
 	stack.add_child(_home)
 	_online_panel = _build_online_panel(stack)
 	_online_panel.hide()
+	_practice_panel = _build_practice_panel()
+	stack.add_child(_practice_panel)
+	_practice_panel.hide()
 
 	_status = UiKit.label("", 16, UiKit.HIGHLIGHT)
 	_status.add_theme_color_override("font_outline_color", Color(0, 0, 0, 0.8))
@@ -83,7 +91,7 @@ func _build_home() -> VBoxContainer:
 	home.custom_minimum_size = Vector2(380, 0)
 	home.add_theme_constant_override("separation", 14)
 	_online_button = _big_button("Play online", _show_online, UiKit.Style.PRIMARY)
-	_practice_button = _big_button("Practice", _on_practice_pressed, UiKit.Style.ACCENT)
+	_practice_button = _big_button("Practice", _show_practice, UiKit.Style.ACCENT)
 	_characters_button = _big_button("Characters", _on_characters_pressed, UiKit.Style.GHOST)
 	_help_button = _big_button("How to play", _show_help, UiKit.Style.GHOST)
 	# The pixel font has no "·", so stick to letters, spaces and brackets.
@@ -217,6 +225,24 @@ func _pulse(title: Label) -> void:
 	tween.tween_property(title, "scale", Vector2.ONE, TITLE_PULSE_SECONDS)
 
 
+func _build_practice_panel() -> VBoxContainer:
+	var panel := VBoxContainer.new()
+	panel.custom_minimum_size = Vector2(380, 0)
+	panel.add_theme_constant_override("separation", 14)
+	_free_play_button = _big_button("Free play", _start_practice.bind(CharactersScreen.MODE_FREE), UiKit.Style.ACCENT)
+	_penalty_button = _big_button("Penalty", _start_practice.bind(CharactersScreen.MODE_PENALTY), UiKit.Style.PRIMARY)
+	_practice_back_button = _big_button("Back", _show_home, UiKit.Style.GHOST)
+	for button in [_free_play_button, _penalty_button, _practice_back_button]:
+		panel.add_child(button)
+	return panel
+
+
+func _show_practice() -> void:
+	_home.hide()
+	_practice_panel.show()
+	_status.text = ""
+
+
 func _show_online() -> void:
 	_home.hide()
 	_online_panel.show()
@@ -226,6 +252,7 @@ func _show_online() -> void:
 
 func _show_home() -> void:
 	_online_panel.hide()
+	_practice_panel.hide()
 	_home.show()
 	_status.text = ""
 
@@ -248,10 +275,11 @@ func _on_join_pressed() -> void:
 	_send(func() -> void: Net.request_join.rpc_id(1, code, player_name))
 
 
-## Practice starts by picking who to play as.
-func _on_practice_pressed() -> void:
+## Practice in `mode` starts by picking who to play as.
+func _start_practice(mode: String) -> void:
 	Net.leave()
 	CharactersScreen.pick_for_practice = true
+	CharactersScreen.practice_mode = mode
 	_change_scene(CHARACTERS_SCENE)
 
 

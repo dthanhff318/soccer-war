@@ -49,6 +49,16 @@ python3 serve.py 9000     # custom port
 If you deploy elsewhere, that host must send the same two headers, or disable
 `variant/thread_support` in the export preset.
 
+## Practice
+
+**PRACTICE** offers two modes, then a character pick (stats change how you play):
+
+- **Free play** — you, three still teammates and a red keeper. Pick a keeper
+  character and a red shooter fires shot after shot at your goal instead.
+- **Penalty** — a shootout against the AI on one goal. You shoot on your kicks
+  and keep (up/down along the goal line only) on the AI's. 3-2-1 countdown
+  before each kick, one touch per kick, five each, then sudden death.
+
 ## Online multiplayer
 
 The server is the same Godot project run headless. It owns the whole simulation

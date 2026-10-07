@@ -19,7 +19,7 @@ const SEGMENT_GAP := 1.2
 const DIGIT_SPACING := 8.0
 ## Italic slant of the digits, as x offset per pixel of height.
 const SKEW := 0.1
-const LABEL_FONT_SIZE := 12
+const LABEL_FONT_SIZE := 16
 const LABEL_ROW_HEIGHT := 13.0
 
 ## Segments a..g lit for each digit 0-9.

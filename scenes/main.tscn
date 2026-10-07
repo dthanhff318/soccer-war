@@ -5,7 +5,7 @@
 [ext_resource type="PackedScene" uid="uid://bball000001" path="res://scenes/ball.tscn" id="3_ball"]
 [ext_resource type="Script" path="res://scripts/stamina_bar.gd" id="5_stamina"]
 [ext_resource type="Script" path="res://scripts/goal_banner.gd" id="6_goal_banner"]
-[ext_resource type="FontFile" uid="uid://cllpdhlm3ogh5" path="res://assets/field/font/plumppixel.ttf" id="7_pixel_font"]
+[ext_resource type="FontFile" uid="uid://cdj6newgsbmkk" path="res://assets/font/VT323-Regular.ttf" id="7_pixel_font"]
 [ext_resource type="Script" path="res://scripts/scoreboard.gd" id="8_scoreboard"]
 [ext_resource type="PackedScene" uid="uid://bpitch000001" path="res://scenes/pitch.tscn" id="9_pitch"]
 

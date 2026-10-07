@@ -93,7 +93,7 @@ func _build_settings(pauses: bool) -> void:
 	layer.layer = 10
 	add_child(layer)
 	_settings_button = UiKit.button("Settings", _open_settings, UiKit.Style.GHOST)
-	_settings_button.add_theme_font_size_override("font_size", 16)
+	_settings_button.add_theme_font_size_override("font_size", 22)
 	_settings_button.custom_minimum_size = Vector2(150, 36)
 	_settings_button.position = Vector2(1116, 10)
 	_settings_button.focus_mode = Control.FOCUS_NONE

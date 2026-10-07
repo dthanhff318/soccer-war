@@ -215,7 +215,7 @@ func _unhandled_input(event: InputEvent) -> void:
 func _big_button(text: String, on_pressed: Callable, style: UiKit.Style) -> Button:
 	var button := UiKit.button(text, on_pressed, style)
 	button.custom_minimum_size.y = 54
-	button.add_theme_font_size_override("font_size", 28)
+	button.add_theme_font_size_override("font_size", 38)
 	return button
 
 

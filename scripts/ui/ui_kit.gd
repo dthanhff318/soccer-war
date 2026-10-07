@@ -5,7 +5,10 @@ extends RefCounted
 ## chunky outlined boxes with chamfered corners and a thick bottom edge (so
 ## buttons read as raised blocks), and buttons coloured by team.
 
-const PIXEL_FONT := preload("res://assets/field/font/plumppixel.ttf")
+## VT323 (SIL OFL 1.1, see assets/font/VT323-OFL.txt): a light pixel face.
+const PIXEL_FONT := preload("res://assets/font/VT323-Regular.ttf")
+## VT323 draws small for its size; headings scale up to match the layout.
+const PIXEL_SCALE := 1.35
 ## Loaded at runtime (not preloaded) so the headless server, which ships
 ## without this large texture, never tries to load it.
 const FIELD_TEXTURE_PATH := "res://assets/field/field.png"
@@ -116,13 +119,15 @@ static func card(parent: Control, width: float, accent: Color = OUTLINE) -> VBox
 
 ## Big pixel-font heading with an outline and drop shadow.
 static func title(text: String, font_size: int, color: Color = TEXT) -> Label:
-	var result := label(text, font_size, color)
+	var size := roundi(font_size * PIXEL_SCALE)
+	var result := label(text, size, color)
 	result.add_theme_font_override("font", PIXEL_FONT)
+	# A thin outline keeps the light face readable over busy backgrounds.
 	result.add_theme_color_override("font_outline_color", Color(0.02, 0.05, 0.03))
-	result.add_theme_constant_override("outline_size", maxi(font_size / 6, 4))
+	result.add_theme_constant_override("outline_size", maxi(size / 14, 2))
 	result.add_theme_color_override("font_shadow_color", Color(0, 0, 0, 0.6))
 	result.add_theme_constant_override("shadow_offset_x", 0)
-	result.add_theme_constant_override("shadow_offset_y", maxi(font_size / 12, 2))
+	result.add_theme_constant_override("shadow_offset_y", maxi(size / 20, 2))
 	return result
 
 
@@ -149,7 +154,7 @@ static func button(text: String, on_pressed: Callable, style: Style = Style.PRIM
 	result.custom_minimum_size = Vector2(0, 46)
 	result.mouse_default_cursor_shape = Control.CURSOR_POINTING_HAND
 	result.add_theme_font_override("font", PIXEL_FONT)
-	result.add_theme_font_size_override("font_size", 22)
+	result.add_theme_font_size_override("font_size", 30)
 	for state in ["font_color", "font_hover_color", "font_pressed_color", "font_focus_color"]:
 		result.add_theme_color_override(state, TEXT)
 	result.add_theme_color_override("font_disabled_color", Color(TEXT, 0.4))
@@ -225,7 +230,7 @@ static func list_entry(text: String, chip: Color, group: ButtonGroup, on_pressed
 	entry.button_group = group
 	entry.alignment = HORIZONTAL_ALIGNMENT_LEFT
 	entry.custom_minimum_size.y = 40
-	entry.add_theme_font_size_override("font_size", 18)
+	entry.add_theme_font_size_override("font_size", 26)
 	entry.icon = color_chip(chip, 14)
 	entry.add_theme_constant_override("h_separation", 12)
 	var picked := _pixel_box(Color(0.12, 0.16, 0.24, 0.95), HIGHLIGHT, 0)
@@ -295,7 +300,7 @@ static func key_cap(text: String) -> PanelContainer:
 	letters.text = text
 	letters.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	letters.add_theme_font_override("font", PIXEL_FONT)
-	letters.add_theme_font_size_override("font_size", 16)
+	letters.add_theme_font_size_override("font_size", 24)
 	letters.add_theme_color_override("font_color", OUTLINE)
 	cap.add_child(letters)
 	return cap

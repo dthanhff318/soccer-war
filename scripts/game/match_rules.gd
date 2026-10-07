@@ -11,11 +11,11 @@ const CENTER := Vector2(640, 360)
 const PITCH_LENGTH := 904.0
 const PITCH_WIDTH := 565.0
 ## Width of the goal mouth, and how far the net reaches behind the goal line.
-const GOAL_WIDTH := 136.6
+const GOAL_WIDTH := 170.75
 const GOAL_DEPTH := 73.0
 ## Markings, scaled from a real 105 x 68 m pitch.
 const PENALTY_BOX := Vector2(142.0, 335.0)   # depth from goal line, width
-const GOAL_AREA := Vector2(47.0, 152.0)
+const GOAL_AREA := Vector2(47.0, 230.0)
 const PENALTY_SPOT_DISTANCE := 95.0
 const CENTER_CIRCLE_RADIUS := 76.0
 

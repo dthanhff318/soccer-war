@@ -69,3 +69,20 @@ func test_kickoff_spots_are_in_the_right_halves() -> void:
 		for spot in MatchRules.kickoff_positions(Roster.Team.LEFT, count):
 			check(spot.x > MatchRules.GOAL_LINE_LEFT and spot.x < MatchRules.CENTER.x, "left half %s" % spot)
 			check(spot.y > MatchRules.TOUCHLINE_TOP and spot.y < MatchRules.TOUCHLINE_BOTTOM, "on pitch %s" % spot)
+
+
+func test_goal_is_one_point_two_five_times_wider() -> void:
+	check_near(MatchRules.GOAL_WIDTH, 136.6 * 1.25, 0.01, "goal mouth")
+	check_near(MatchRules.GOAL_MOUTH_BOTTOM - MatchRules.GOAL_MOUTH_TOP, MatchRules.GOAL_WIDTH, 0.01, "mouth from width")
+	check(MatchRules.GOAL_AREA.y > MatchRules.GOAL_WIDTH + 40.0, "goal area still wraps the goal")
+	check(MatchRules.PENALTY_BOX.y > MatchRules.GOAL_AREA.y, "penalty box wraps the goal area")
+
+
+func test_shot_near_the_post_of_the_wider_goal_scores() -> void:
+	var ball := await _setup()
+	# Old mouth ended at CENTER.y + 68.3; this is past it, and the ball (radius
+	# 11.2) still clears the new post at CENTER.y + 85.4.
+	var near_post := Vector2(MatchRules.CENTER.x + 300, MatchRules.CENTER.y + 70)
+	_roll(ball, near_post, Vector2(900, 0))
+	check_eq(MatchRules.scoring_team(ball.position, ball.radius), Roster.Team.LEFT, "goal")
+	_world.queue_free()

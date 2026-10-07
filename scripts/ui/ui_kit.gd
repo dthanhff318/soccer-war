@@ -12,11 +12,18 @@ const FIELD_TEXTURE_PATH := "res://assets/field/field.png"
 const BLUE := Color(0.2, 0.35, 1.0)
 const RED := Color(0.95, 0.25, 0.25)
 const GREEN := Color(0.18, 0.62, 0.32)
+const ORANGE := Color(0.93, 0.5, 0.12)
+## Title colour picked from the stadium stands in the menu artwork.
+const GOLD := Color(1.0, 0.8, 0.25)
 const TEXT := Color(0.96, 0.97, 0.95)
 const MUTED := Color(0.78, 0.84, 0.8, 0.75)
 const HIGHLIGHT := Color(1.0, 0.85, 0.3)
 
-enum Style { PRIMARY, DANGER, SUCCESS, GHOST }
+## How far and how slowly the menu artwork drifts.
+const DRIFT_PIXELS := 40.0
+const DRIFT_SECONDS := 14.0
+
+enum Style { PRIMARY, DANGER, SUCCESS, GHOST, ACCENT }
 
 
 ## Pitch backdrop plus a centred column; returns the column.
@@ -42,6 +49,43 @@ static func screen(owner: Control) -> VBoxContainer:
 	column.add_theme_constant_override("separation", 16)
 	center.add_child(column)
 	return column
+
+
+## Full-screen artwork that drifts slowly from side to side, darkened at the
+## top (behind the title) and bottom (behind the buttons) for readability.
+static func artwork_backdrop(owner: Control, texture: Texture2D) -> void:
+	owner.set_anchors_preset(Control.PRESET_FULL_RECT)
+	owner.clip_contents = true
+	var art := TextureRect.new()
+	art.texture = texture
+	art.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+	art.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_COVERED
+	# Wider than the screen so it has room to drift without showing an edge.
+	art.anchor_right = 1.0
+	art.anchor_bottom = 1.0
+	art.offset_left = -DRIFT_PIXELS
+	art.offset_right = DRIFT_PIXELS
+	owner.add_child(art)
+	var drift := art.create_tween().set_loops().set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN_OUT)
+	drift.tween_property(art, "position:x", 0.0, DRIFT_SECONDS).from(-2.0 * DRIFT_PIXELS)
+	drift.tween_property(art, "position:x", -2.0 * DRIFT_PIXELS, DRIFT_SECONDS)
+
+	var gradient := Gradient.new()
+	gradient.offsets = PackedFloat32Array([0.0, 0.3, 0.5, 1.0])
+	gradient.colors = PackedColorArray([
+		Color(0.02, 0.02, 0.05, 0.8), Color(0.02, 0.02, 0.05, 0.15),
+		Color(0.01, 0.04, 0.02, 0.2), Color(0.01, 0.04, 0.02, 0.85),
+	])
+	var shade_texture := GradientTexture2D.new()
+	shade_texture.gradient = gradient
+	shade_texture.fill_from = Vector2(0, 0)
+	shade_texture.fill_to = Vector2(0, 1)
+	var shade := TextureRect.new()
+	shade.texture = shade_texture
+	shade.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+	shade.stretch_mode = TextureRect.STRETCH_SCALE
+	shade.set_anchors_preset(Control.PRESET_FULL_RECT)
+	owner.add_child(shade)
 
 
 ## Frosted rounded panel; returns the column inside it. `accent` tints the
@@ -104,6 +148,7 @@ static func button(text: String, on_pressed: Callable, style: Style = Style.PRIM
 
 	var base: Color = {
 		Style.PRIMARY: BLUE, Style.DANGER: RED, Style.SUCCESS: GREEN, Style.GHOST: Color(1, 1, 1, 0.06),
+		Style.ACCENT: ORANGE,
 	}[style]
 	var border := Color(1, 1, 1, 0.28) if style == Style.GHOST else base.lightened(0.25)
 	result.add_theme_stylebox_override("normal", _box(base, 10, border, 2))

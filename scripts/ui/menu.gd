@@ -7,6 +7,7 @@ extends Control
 
 const LOBBY_SCENE := "res://scenes/lobby.tscn"
 const MATCH_SCENE := "res://scenes/main.tscn"
+const CHARACTERS_SCENE := "res://scenes/characters.tscn"
 const ARTWORK := preload("res://assets/image/background.jpg")
 ## Gentle pulse of the title, in seconds per beat.
 const TITLE_PULSE_SECONDS := 1.6
@@ -17,6 +18,7 @@ var _online_button: Button
 var _practice_button: Button
 var _settings_button: Button
 var _help_button: Button
+var _characters_button: Button
 var _help_modal: Control
 var _help_close_button: Button
 var _back_button: Button
@@ -82,10 +84,11 @@ func _build_home() -> VBoxContainer:
 	home.add_theme_constant_override("separation", 14)
 	_online_button = _big_button("Play online", _show_online, UiKit.Style.PRIMARY)
 	_practice_button = _big_button("Practice", _on_practice_pressed, UiKit.Style.ACCENT)
+	_characters_button = _big_button("Characters", _change_scene.bind(CHARACTERS_SCENE), UiKit.Style.GHOST)
 	_help_button = _big_button("How to play", _show_help, UiKit.Style.GHOST)
 	# The pixel font has no "·", so stick to letters, spaces and brackets.
 	_settings_button = _big_button("Settings (soon)", _on_settings_pressed, UiKit.Style.GHOST)
-	for button in [_online_button, _practice_button, _help_button, _settings_button]:
+	for button in [_online_button, _practice_button, _characters_button, _help_button, _settings_button]:
 		home.add_child(button)
 	return home
 
@@ -201,7 +204,7 @@ func _unhandled_input(event: InputEvent) -> void:
 
 func _big_button(text: String, on_pressed: Callable, style: UiKit.Style) -> Button:
 	var button := UiKit.button(text, on_pressed, style)
-	button.custom_minimum_size.y = 60
+	button.custom_minimum_size.y = 54
 	button.add_theme_font_size_override("font_size", 28)
 	return button
 

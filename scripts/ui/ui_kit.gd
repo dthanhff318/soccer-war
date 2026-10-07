@@ -217,6 +217,48 @@ static func footer(owner: Control, text: String) -> Label:
 	return hint
 
 
+## Selectable row in a list: a colour chip and a name. Toggle buttons in one
+## ButtonGroup, so the picked row stays highlighted.
+static func list_entry(text: String, chip: Color, group: ButtonGroup, on_pressed: Callable) -> Button:
+	var entry := button(text, on_pressed, Style.GHOST)
+	entry.toggle_mode = true
+	entry.button_group = group
+	entry.alignment = HORIZONTAL_ALIGNMENT_LEFT
+	entry.custom_minimum_size.y = 40
+	entry.add_theme_font_size_override("font_size", 18)
+	entry.icon = color_chip(chip, 14)
+	entry.add_theme_constant_override("h_separation", 12)
+	var picked := _pixel_box(Color(0.12, 0.16, 0.24, 0.95), HIGHLIGHT, 0)
+	entry.add_theme_stylebox_override("pressed", picked)
+	entry.add_theme_stylebox_override("hover_pressed", picked)
+	return entry
+
+
+## Small square of solid colour with a dark pixel outline.
+static func color_chip(color: Color, size: int) -> ImageTexture:
+	var image := Image.create(size, size, false, Image.FORMAT_RGBA8)
+	image.fill(OUTLINE)
+	image.fill_rect(Rect2i(2, 2, size - 4, size - 4), color)
+	return ImageTexture.create_from_image(image)
+
+
+## Pixel stat bar for a 1–99 value.
+static func stat_bar(value: int, fill: Color) -> ProgressBar:
+	var bar := ProgressBar.new()
+	bar.min_value = 0
+	bar.max_value = 99
+	bar.value = value
+	bar.show_percentage = false
+	bar.custom_minimum_size = Vector2(0, 18)
+	bar.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	bar.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	bar.add_theme_stylebox_override("background", _pixel_box(Color(0, 0, 0, 0.55), OUTLINE, 0))
+	var filled := _pixel_box(fill, OUTLINE, 0)
+	filled.corner_detail = 1
+	bar.add_theme_stylebox_override("fill", filled)
+	return bar
+
+
 ## A keyboard key drawn as a small light pixel block, e.g. [SPACE].
 static func key_cap(text: String) -> PanelContainer:
 	var cap := PanelContainer.new()

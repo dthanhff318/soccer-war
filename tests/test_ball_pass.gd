@@ -56,14 +56,19 @@ func _step(ball: Ball, ticks: int) -> void:
 		ball.step(DELTA)
 
 
-func test_pass_goes_in_running_direction_with_pass_strength() -> void:
+func test_pass_follows_the_line_from_player_centre_to_ball_centre() -> void:
+	# Standing still after running up, with the ball off to the side: the pass
+	# goes where the ball is (like a kick), not where the player last ran.
 	_setup()
 	var player := _player(Vector2(100, 100))
-	var ball := _ball(Vector2(130, 100))
+	var ball := _ball(Vector2(120, 80))
 	await _settle()
-	player.simulate(Protocol.IN_UP | Protocol.IN_PASS, DELTA)
+	player.simulate(Protocol.IN_UP, DELTA)
+	player.velocity = Vector2.ZERO
+	var line := (ball.position - player.position).normalized()
+	player.simulate(Protocol.IN_PASS, DELTA)
 	check(ball.is_pass, "ball is a pass")
-	check_near(ball.velocity.normalized().dot(Vector2.UP), 1.0, 0.001, "goes up, the running direction")
+	check_near(rad_to_deg(line.angle_to(ball.velocity.normalized())), 0.0, 0.1, "centre-to-centre direction")
 	check_near(ball.velocity.length(), player.pass_strength, 0.5, "pass strength")
 	_teardown()
 

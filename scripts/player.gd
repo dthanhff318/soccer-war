@@ -160,18 +160,21 @@ func _push_touched_balls(speed: float) -> void:
 func _try_kick() -> void:
 	for body in _kick_area.get_overlapping_bodies():
 		if body is Ball:
-			var to_ball := body.global_position - global_position
-			# Prefer the direction toward the ball; fall back to facing when
-			# the ball is sitting exactly on top of the player.
-			var dir := to_ball.normalized() if to_ball.length() > 1.0 else _facing
-			body.kick(dir * kick_strength)
+			body.kick(_strike_direction(body) * kick_strength)
 
 
-## Passes every ball within reach straight along the running direction.
+## Passes every ball within reach, aimed the same way as a kick.
 func _try_pass() -> void:
 	for body in _kick_area.get_overlapping_bodies():
 		if body is Ball:
-			body.start_pass(_facing * pass_strength)
+			body.start_pass(_strike_direction(body) * pass_strength)
+
+
+## Direction from the player's centre to the ball's centre; falls back to
+## facing when the ball is sitting exactly on top of the player.
+func _strike_direction(ball: Ball) -> Vector2:
+	var to_ball := ball.global_position - global_position
+	return to_ball.normalized() if to_ball.length() > 1.0 else _facing
 
 
 ## Team ring under the sprite, plus the name above it in online play.

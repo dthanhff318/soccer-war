@@ -43,6 +43,10 @@ const NAME_FONT_SIZE := 12
 ## How quickly a smoothed prediction correction fades, per second.
 const OFFSET_DECAY := 15.0
 const POWER_BAR_SIZE := Vector2(36, 5)
+## On-screen size of the shirt sprite, whatever the resolution of its image.
+const SPRITE_SIZE := 33.0
+## Gap between the rings and the power bar above / the name below.
+const LABEL_GAP := 3.0
 
 var stamina: float
 ## True after stamina hit zero; prevents stutter-sprinting on an empty bar.
@@ -67,7 +71,10 @@ var _facing: Vector2 = Vector2.RIGHT
 
 func _ready() -> void:
 	stamina = max_stamina
-	_sprite.texture = Teams.sprite_of(team)
+	var texture := Teams.sprite_of(team)
+	_sprite.texture = texture
+	# Team images come in different resolutions; draw them all the same size.
+	_sprite.scale = Vector2.ONE * SPRITE_SIZE / maxf(texture.get_width(), texture.get_height())
 
 
 func _process(delta: float) -> void:
@@ -207,7 +214,19 @@ func _strike_direction(ball: Ball) -> Vector2:
 	return to_ball.normalized() if to_ball.length() > 1.0 else _facing
 
 
-## Team ring under the sprite, plus the name above it in online play.
+## Power bar above the head (relative to the player's centre).
+func power_bar_rect() -> Rect2:
+	var bottom := -_outer_ring_radius() - LABEL_GAP
+	return Rect2(Vector2(-POWER_BAR_SIZE.x / 2.0, bottom - POWER_BAR_SIZE.y), POWER_BAR_SIZE)
+
+
+## Top edge of the name label below the feet (relative to the player's centre).
+func name_top() -> float:
+	return _outer_ring_radius() + LABEL_GAP
+
+
+## Team ring under the sprite, the power bar above it while charging, and the
+## name below it in online play.
 func _draw() -> void:
 	draw_arc(visual_offset, RING_RADIUS, 0.0, TAU, 32, Teams.color_of(team), 3.0, true)
 	if is_local:
@@ -217,16 +236,23 @@ func _draw() -> void:
 	if not display_name.is_empty():
 		var font := ThemeDB.fallback_font
 		var width := font.get_string_size(display_name, HORIZONTAL_ALIGNMENT_LEFT, -1, NAME_FONT_SIZE).x
-		var baseline := visual_offset + Vector2(-width / 2.0, -RING_RADIUS - 8.0)
+		var baseline := visual_offset + Vector2(-width / 2.0, name_top() + font.get_ascent(NAME_FONT_SIZE))
+		draw_string_outline(font, baseline, display_name, HORIZONTAL_ALIGNMENT_LEFT, -1, NAME_FONT_SIZE, 4, Color(0, 0, 0, 0.7))
 		draw_string(font, baseline, display_name, HORIZONTAL_ALIGNMENT_LEFT, -1, NAME_FONT_SIZE, Color.WHITE)
 
 
 ## Charge bar above the head while Space is held: yellow, turning red when full.
 func _draw_power_bar() -> void:
 	var ratio := clampf(kick_charge / kick_charge_time, 0.0, 1.0)
-	var top_left := visual_offset + Vector2(-POWER_BAR_SIZE.x / 2.0, -RING_RADIUS - 34.0)
-	var frame := Rect2(top_left, POWER_BAR_SIZE)
+	var frame := power_bar_rect()
+	frame.position += visual_offset
+	var top_left := frame.position
 	draw_rect(frame, Color(0, 0, 0, 0.6))
 	var fill := Color(1.0, 0.85, 0.2).lerp(Color(0.95, 0.2, 0.15), ratio)
 	draw_rect(Rect2(top_left, Vector2(POWER_BAR_SIZE.x * ratio, POWER_BAR_SIZE.y)), fill)
 	draw_rect(frame, Color.WHITE, false, 1.0)
+
+
+## The white "you" ring is a little larger than the team ring.
+func _outer_ring_radius() -> float:
+	return RING_RADIUS + (3.0 if is_local else 0.0)

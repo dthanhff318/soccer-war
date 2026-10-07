@@ -11,7 +11,7 @@ const PLAYER_SCENE := preload("res://scenes/player.tscn")
 const MENU_SCENE := "res://scenes/menu.tscn"
 const LOBBY_SCENE := "res://scenes/lobby.tscn"
 ## Offline practice: stationary blue teammates to pass to.
-const OFFLINE_TEAMMATE_SPOTS: Array[Vector2] = [Vector2(520, 220), Vector2(520, 500), Vector2(800, 360)]
+const OFFLINE_TEAMMATE_SPOTS: Array[Vector2] = [Vector2(496, 220), Vector2(496, 500), Vector2(832, 360)]
 
 var score: Array[int] = [0, 0]
 

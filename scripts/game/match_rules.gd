@@ -2,13 +2,29 @@ class_name MatchRules
 extends RefCounted
 
 ## Pitch geometry and match timing shared by the server simulation and the
-## offline game. Coordinates match the lines on field.png at 1280x720.
+## offline game. Every line, wall and net is derived from the few sizes
+## below (screen pixels at 1280x720): change PITCH_LENGTH and the drawn
+## pitch, its walls, the goals and the kickoff spots all follow.
 
-const GOAL_LINE_LEFT := 263.2
-const GOAL_LINE_RIGHT := 1016.8
-const GOAL_MOUTH_TOP := 291.8
-const GOAL_MOUTH_BOTTOM := 428.4
 const CENTER := Vector2(640, 360)
+## Goal line to goal line, and touchline to touchline.
+const PITCH_LENGTH := 904.0
+const PITCH_WIDTH := 565.0
+## Width of the goal mouth, and how far the net reaches behind the goal line.
+const GOAL_WIDTH := 136.6
+const GOAL_DEPTH := 73.0
+## Markings, scaled from a real 105 x 68 m pitch.
+const PENALTY_BOX := Vector2(142.0, 335.0)   # depth from goal line, width
+const GOAL_AREA := Vector2(47.0, 152.0)
+const PENALTY_SPOT_DISTANCE := 95.0
+const CENTER_CIRCLE_RADIUS := 76.0
+
+const GOAL_LINE_LEFT := CENTER.x - PITCH_LENGTH / 2.0
+const GOAL_LINE_RIGHT := CENTER.x + PITCH_LENGTH / 2.0
+const TOUCHLINE_TOP := CENTER.y - PITCH_WIDTH / 2.0
+const TOUCHLINE_BOTTOM := CENTER.y + PITCH_WIDTH / 2.0
+const GOAL_MOUTH_TOP := CENTER.y - GOAL_WIDTH / 2.0
+const GOAL_MOUTH_BOTTOM := CENTER.y + GOAL_WIDTH / 2.0
 
 const MATCH_SECONDS := 300.0
 ## Ball stays in the net this long before the kickoff reset.
@@ -16,13 +32,14 @@ const CELEBRATION_SECONDS := 2.5
 ## Final score is shown this long before everyone returns to the lobby.
 const RESULT_SECONDS := 5.0
 
-## Kickoff spots for the left team, by player count; the right team mirrors them.
+## Kickoff spots for the left team as offsets from the centre spot, by
+## player count; the right team mirrors them.
 const FORMATIONS := [
 	[],
-	[Vector2(500, 360)],
-	[Vector2(500, 300), Vector2(500, 420)],
-	[Vector2(520, 360), Vector2(420, 250), Vector2(420, 470)],
-	[Vector2(520, 290), Vector2(520, 430), Vector2(400, 220), Vector2(400, 500)],
+	[Vector2(-168, 0)],
+	[Vector2(-168, -60), Vector2(-168, 60)],
+	[Vector2(-144, 0), Vector2(-264, -110), Vector2(-264, 110)],
+	[Vector2(-144, -70), Vector2(-144, 70), Vector2(-288, -140), Vector2(-288, 140)],
 ]
 
 
@@ -40,8 +57,9 @@ static func scoring_team(ball_pos: Vector2, radius: float) -> int:
 
 static func kickoff_positions(team: int, count: int) -> Array[Vector2]:
 	var result: Array[Vector2] = []
-	for spot: Vector2 in FORMATIONS[clampi(count, 0, FORMATIONS.size() - 1)]:
-		result.append(spot if team == Roster.Team.LEFT else Vector2(CENTER.x * 2.0 - spot.x, spot.y))
+	for offset: Vector2 in FORMATIONS[clampi(count, 0, FORMATIONS.size() - 1)]:
+		var mirrored := offset if team == Roster.Team.LEFT else Vector2(-offset.x, offset.y)
+		result.append(CENTER + mirrored)
 	return result
 
 

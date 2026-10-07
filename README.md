@@ -117,7 +117,7 @@ soccer-war/
 │   ├── boot.tscn          # --server → server.tscn, else menu.tscn
 │   ├── menu.tscn, lobby.tscn
 │   ├── main.tscn          # match: field, pitch, players, ball, HUD
-│   ├── pitch.tscn         # walls and goal nets (collision only)
+│   ├── pitch.tscn         # pitch drawn in code from MatchRules, with walls and nets
 │   ├── server.tscn        # dedicated server root
 │   ├── player.tscn, ball.tscn
 ├── scripts/

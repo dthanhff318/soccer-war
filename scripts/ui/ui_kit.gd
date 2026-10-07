@@ -7,7 +7,8 @@ extends RefCounted
 
 ## VT323 (SIL OFL 1.1, see assets/font/VT323-OFL.txt): a light pixel face.
 const PIXEL_FONT := preload("res://assets/font/VT323-Regular.ttf")
-## VT323 draws small for its size; headings scale up to match the layout.
+## VT323 draws small for its size; every label scales its size by this so
+## callers can keep thinking in "normal" font sizes.
 const PIXEL_SCALE := 1.35
 ## Loaded at runtime (not preloaded) so the headless server, which ships
 ## without this large texture, never tries to load it.
@@ -120,7 +121,7 @@ static func card(parent: Control, width: float, accent: Color = OUTLINE) -> VBox
 ## Big pixel-font heading with an outline and drop shadow.
 static func title(text: String, font_size: int, color: Color = TEXT) -> Label:
 	var size := roundi(font_size * PIXEL_SCALE)
-	var result := label(text, size, color)
+	var result := label(text, font_size, color)
 	result.add_theme_font_override("font", PIXEL_FONT)
 	# A thin outline keeps the light face readable over busy backgrounds.
 	result.add_theme_color_override("font_outline_color", Color(0.02, 0.05, 0.03))
@@ -133,7 +134,7 @@ static func title(text: String, font_size: int, color: Color = TEXT) -> Label:
 
 ## Small upper-case label above a field.
 static func caption(text: String) -> Label:
-	var result := label(text.to_upper(), 12, MUTED)
+	var result := label(text.to_upper(), 14, MUTED)
 	result.horizontal_alignment = HORIZONTAL_ALIGNMENT_LEFT
 	return result
 
@@ -143,7 +144,7 @@ static func label(text: String, font_size: int, color: Color = TEXT) -> Label:
 	result.text = text
 	result.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	result.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	result.add_theme_font_size_override("font_size", font_size)
+	result.add_theme_font_size_override("font_size", roundi(font_size * PIXEL_SCALE))
 	result.add_theme_color_override("font_color", color)
 	return result
 
@@ -180,7 +181,7 @@ static func line_edit(placeholder: String, max_length: int) -> LineEdit:
 	result.placeholder_text = placeholder
 	result.max_length = max_length
 	result.custom_minimum_size = Vector2(0, 46)
-	result.add_theme_font_size_override("font_size", 18)
+	result.add_theme_font_size_override("font_size", 24)
 	result.add_theme_color_override("font_color", TEXT)
 	result.add_theme_color_override("font_placeholder_color", Color(TEXT, 0.35))
 	result.add_theme_color_override("caret_color", HIGHLIGHT)
@@ -206,7 +207,7 @@ static func divider(text: String) -> HBoxContainer:
 		line.size_flags_vertical = Control.SIZE_SHRINK_CENTER
 		row.add_child(line)
 		if i == 0:
-			var word := label(text, 12, MUTED)
+			var word := label(text, 14, MUTED)
 			word.autowrap_mode = TextServer.AUTOWRAP_OFF
 			row.add_child(word)
 	return row

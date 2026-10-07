@@ -33,11 +33,12 @@ script = ExtResource("8_scoreboard")
 font = ExtResource("7_pixel_font")
 
 [node name="Hint" type="Label" parent="UI"]
-offset_left = 456.0
+offset_left = 276.0
 offset_top = 672.0
 offset_right = 1256.0
 offset_bottom = 700.0
 theme_override_colors/font_color = Color(1, 1, 1, 0.6)
+theme_override_font_sizes/font_size = 19
 text = "WASD / Arrows to move  ·  Shift to sprint  ·  Hold Space to shoot  ·  I to pass  ·  Esc for settings"
 horizontal_alignment = 2
 
@@ -59,7 +60,7 @@ offset_left = 24.0
 offset_top = 646.0
 offset_right = 244.0
 offset_bottom = 670.0
-theme_override_font_sizes/font_size = 14
+theme_override_font_sizes/font_size = 20
 text = "STAMINA"
 
 [node name="StaminaBar" type="Control" parent="UI"]
@@ -77,7 +78,7 @@ offset_top = 16.0
 offset_right = 324.0
 offset_bottom = 40.0
 theme_override_colors/font_color = Color(1, 1, 1, 0.7)
-theme_override_font_sizes/font_size = 14
+theme_override_font_sizes/font_size = 20
 
 [node name="Result" type="Label" parent="UI"]
 offset_top = 250.0

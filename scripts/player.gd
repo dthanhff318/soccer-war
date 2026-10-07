@@ -41,7 +41,7 @@ signal stamina_changed(current: float, maximum: float, exhausted: bool)
 @export var exhausted_recover_at: float = 30.0
 
 const RING_RADIUS := 18.0
-const NAME_FONT_SIZE := 12
+const NAME_FONT_SIZE := 17
 ## How quickly a smoothed prediction correction fades, per second.
 const OFFSET_DECAY := 15.0
 const POWER_BAR_SIZE := Vector2(36, 5)
@@ -290,7 +290,7 @@ func _draw() -> void:
 	if is_local and _kick_held:
 		_draw_power_bar()
 	if not display_name.is_empty():
-		var font := ThemeDB.fallback_font
+		var font := UiKit.PIXEL_FONT
 		var width := font.get_string_size(display_name, HORIZONTAL_ALIGNMENT_LEFT, -1, NAME_FONT_SIZE).x
 		var baseline := visual_offset + Vector2(-width / 2.0, name_top() + font.get_ascent(NAME_FONT_SIZE))
 		draw_string_outline(font, baseline, display_name, HORIZONTAL_ALIGNMENT_LEFT, -1, NAME_FONT_SIZE, 4, Color(0, 0, 0, 0.7))

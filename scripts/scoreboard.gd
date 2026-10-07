@@ -106,7 +106,7 @@ func _draw_panel() -> void:
 
 
 func _draw_team_label(text: String, color: Color, window: Rect2) -> void:
-	var label_font := font if font else ThemeDB.fallback_font
+	var label_font := font if font else UiKit.PIXEL_FONT
 	var text_width := label_font.get_string_size(text, HORIZONTAL_ALIGNMENT_LEFT, -1, LABEL_FONT_SIZE).x
 	var baseline := Vector2(window.get_center().x - text_width / 2.0, LABEL_ROW_HEIGHT)
 	draw_string(label_font, baseline, text, HORIZONTAL_ALIGNMENT_LEFT, -1, LABEL_FONT_SIZE, Color(0.92, 0.92, 0.95))
@@ -132,7 +132,7 @@ func _draw_separator(center: Vector2) -> void:
 
 
 func _draw_clock(center: Vector2) -> void:
-	var clock_font := font if font else ThemeDB.fallback_font
+	var clock_font := font if font else UiKit.PIXEL_FONT
 	var font_size := LABEL_FONT_SIZE + 2
 	var text_size := clock_font.get_string_size(_clock_text, HORIZONTAL_ALIGNMENT_LEFT, -1, font_size)
 	var baseline := Vector2(center.x - text_size.x / 2.0, center.y + font_size / 2.0 - 2.0)

@@ -1,6 +1,8 @@
 extends TestCase
 
-## Charged kick: hold Space to charge, release to shoot at 300–650 px/s.
+## Charged kick: hold Space to charge (full after 1 s), release to shoot at
+## 300–650 px/s. Holding 0.5 s past full cancels the kick until Space is
+## pressed again.
 
 const PLAYER_SCENE := preload("res://scenes/player.tscn")
 const BALL_SCENE := preload("res://scenes/ball.tscn")
@@ -52,12 +54,12 @@ func test_power_grows_with_hold_time_and_caps() -> void:
 	var player := _player(Vector2(300, 300))
 	await _settle()
 	check_eq(player.kick_power(), player.min_kick_speed, "nothing held")
-	for i in 45:
+	for i in 30:
 		player.simulate(HOLD, DELTA)
-	check_near(player.kick_power(), 475.0, 1.0, "half of 1.5 s")
-	for i in 200:
+	check_near(player.kick_power(), 475.0, 1.0, "half of 1 s")
+	for i in 30:
 		player.simulate(HOLD, DELTA)
-	check_near(player.kick_power(), 650.0, 0.01, "capped at max")
+	check_near(player.kick_power(), 650.0, 0.01, "full after 1 s")
 	_teardown()
 
 
@@ -81,7 +83,8 @@ func test_tap_kicks_at_minimum_speed() -> void:
 	var ball := _ball(Vector2(325, 300))
 	await _settle()
 	_hold_and_release(player, 1)
-	check_near(ball.velocity.length(), 300.0, 5.0, "tap")
+	# One tick of charge: 300 + 350 / 60 ≈ 306.
+	check_near(ball.velocity.length(), 300.0 + 350.0 / 60.0, 0.5, "tap")
 	_teardown()
 
 
@@ -90,7 +93,7 @@ func test_full_charge_kicks_at_exactly_max_along_centre_line_even_if_rolling() -
 	var player := _player(Vector2(300, 300))
 	var ball := _ball(Vector2(318, 282))
 	await _settle()
-	for i in 120:
+	for i in 80:  # full, and still inside the 0.5 s grace
 		player.simulate(HOLD, DELTA)
 	ball.velocity = Vector2(200, 0)  # rolling sideways must not bend or speed up the shot
 	var line := (ball.position - player.position).normalized()
@@ -145,3 +148,35 @@ func test_keyboard_kick_bit_means_space_is_held() -> void:
 	check((Protocol.keyboard_bits(false) & Protocol.IN_KICK) != 0, "held")
 	Input.action_release("kick")
 	check_eq(Protocol.keyboard_bits(false) & Protocol.IN_KICK, 0, "released")
+
+
+func test_holding_half_a_second_past_full_cancels_the_kick() -> void:
+	_setup()
+	var player := _player(Vector2(300, 300))
+	var ball := _ball(Vector2(325, 300))
+	await _settle()
+	for i in 89:
+		player.simulate(HOLD, DELTA)
+	check(player.is_charging(), "still charging just before the limit")
+	for i in 5:
+		player.simulate(HOLD, DELTA)
+	check(not player.is_charging(), "cancelled: power bar gone")
+	check_eq(player.kick_charge, 0.0, "charge cleared")
+	for i in 30:
+		player.simulate(HOLD, DELTA)
+	check(not player.is_charging(), "keeping Space down does not restart it")
+	player.simulate(0, DELTA)
+	check_eq(ball.velocity, Vector2.ZERO, "release after a cancel does not kick")
+	_teardown()
+
+
+func test_pressing_again_after_a_cancel_kicks_normally() -> void:
+	_setup()
+	var player := _player(Vector2(300, 300))
+	var ball := _ball(Vector2(325, 300))
+	await _settle()
+	_hold_and_release(player, 100)
+	check_eq(ball.velocity, Vector2.ZERO, "cancelled")
+	_hold_and_release(player, 1)
+	check_near(ball.velocity.length(), 300.0, 10.0, "fresh tap kicks")
+	_teardown()

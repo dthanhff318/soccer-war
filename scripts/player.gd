@@ -19,7 +19,10 @@ signal stamina_changed(current: float, maximum: float, exhausted: bool)
 @export var min_kick_speed: float = 300.0
 @export var max_kick_speed: float = 650.0
 ## Seconds of holding Space to reach max_kick_speed.
-@export var kick_charge_time: float = 1.5
+@export var kick_charge_time: float = 1.0
+## Holding this long past full power cancels the kick; Space must be
+## released and pressed again to charge a new one.
+@export var kick_overhold_time: float = 0.5
 ## Speed of a pass (I key), aimed like a kick.
 @export var pass_strength: float = 250.0
 @export var kick_radius: float = 38.4
@@ -58,9 +61,13 @@ var is_local: bool = false
 ## Draw offset that hides small prediction corrections; decays to zero.
 var visual_offset: Vector2 = Vector2.ZERO
 var _regen_cooldown: float = 0.0
-## Seconds Space has been held for the coming kick (0 when not charging).
+## Charge for the coming kick, capped at kick_charge_time (0 when not charging).
 var kick_charge: float = 0.0
 var _kick_held: bool = false
+## Seconds Space has been down in the current press.
+var _hold_time: float = 0.0
+## Set when a kick was cancelled by over-holding; ignored until Space is released.
+var _kick_cancelled: bool = false
 
 ## Last non-zero movement direction, used to aim kicks while standing still.
 var _facing: Vector2 = Vector2.RIGHT
@@ -180,17 +187,38 @@ func _push_touched_balls(speed: float) -> void:
 			ball.push(-collision.get_normal(), speed)
 
 
-## Charges while Space is held; kicks on the tick it is released.
+## True while a kick is charging (the power bar is showing).
+func is_charging() -> bool:
+	return _kick_held
+
+
+## Charges while Space is held and kicks on the tick it is released. Holding
+## kick_overhold_time past full power cancels the kick for this press.
 func _update_kick(held: bool, delta: float) -> void:
-	if held:
-		kick_charge = minf(kick_charge + delta, kick_charge_time)
-		_kick_held = true
+	if not held:
+		if _kick_held:
+			_try_kick()
+		_reset_kick()
+		_kick_cancelled = false
+		return
+	if _kick_cancelled:
+		return
+	_kick_held = true
+	_hold_time += delta
+	kick_charge = minf(_hold_time, kick_charge_time)
+	# Small epsilon: summed 1/60 steps land a hair under the exact limit.
+	if _hold_time >= kick_charge_time + kick_overhold_time - 0.0001:
+		_reset_kick()
+		_kick_cancelled = true
+	queue_redraw()
+
+
+func _reset_kick() -> void:
+	if _kick_held or kick_charge > 0.0:
 		queue_redraw()
-	elif _kick_held:
-		_kick_held = false
-		_try_kick()
-		kick_charge = 0.0
-		queue_redraw()
+	_kick_held = false
+	_hold_time = 0.0
+	kick_charge = 0.0
 
 
 ## Kicks every ball currently overlapping the kick area at the charged power.

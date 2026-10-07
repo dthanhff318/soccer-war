@@ -69,7 +69,7 @@ func _move_with_bounces(motion: Vector2) -> void:
 		var normal := collision.get_normal()
 		if collider is Player and collider.is_goalkeeper:
 			var speed := velocity.length()
-			keeper_touch(normal)
+			keeper_touch(normal, collider)
 			if velocity == Vector2.ZERO:
 				return
 			motion = collision.get_remainder().bounce(normal) * (velocity.length() / speed)
@@ -79,19 +79,23 @@ func _move_with_bounces(motion: Vector2) -> void:
 		motion = collision.get_remainder().bounce(normal) * damping
 
 
-## Speed a shot keeps after a goalkeeper touches it (0 = caught).
-static func keeper_rebound_speed(speed: float) -> float:
-	if speed < KEEPER_CATCH_SPEED:
+## Speed a shot keeps after `keeper` touches it (0 = caught). Without a
+## keeper the default save stats apply.
+static func keeper_rebound_speed(speed: float, keeper: Player = null) -> float:
+	var catch_at: float = keeper.catch_speed if keeper else KEEPER_CATCH_SPEED
+	var min_ratio: float = keeper.rebound_min_ratio if keeper else KEEPER_MIN_RATIO
+	var max_ratio: float = keeper.rebound_max_ratio if keeper else KEEPER_MAX_RATIO
+	if speed < catch_at:
 		return 0.0
-	var t := clampf((speed - KEEPER_CATCH_SPEED) / (KEEPER_FULL_SPEED - KEEPER_CATCH_SPEED), 0.0, 1.0)
-	return speed * lerpf(KEEPER_MIN_RATIO, KEEPER_MAX_RATIO, t)
+	var t := clampf((speed - catch_at) / maxf(KEEPER_FULL_SPEED - catch_at, 1.0), 0.0, 1.0)
+	return speed * lerpf(min_ratio, max_ratio, t)
 
 
 ## A goalkeeper touched the ball; `normal` points from the keeper to the ball.
 ## Slow balls are caught dead, fast ones spill back softly.
-func keeper_touch(normal: Vector2) -> void:
+func keeper_touch(normal: Vector2, keeper: Player = null) -> void:
 	is_pass = false
-	var rebound := keeper_rebound_speed(velocity.length())
+	var rebound := keeper_rebound_speed(velocity.length(), keeper)
 	if rebound == 0.0:
 		velocity = Vector2.ZERO
 	else:
@@ -126,13 +130,13 @@ func start_pass(impulse: Vector2) -> void:
 
 ## Called when a moving player runs into the ball. Ensures the ball travels
 ## away along `direction` at least a little faster than the player was moving.
-func push(direction: Vector2, player_speed: float) -> void:
+func push(direction: Vector2, player_speed: float, factor: float = push_factor) -> void:
 	if is_pass:
 		# A player ran into a pass: it stops at their feet.
 		is_pass = false
 		velocity = Vector2.ZERO
 		return
-	var target_speed := player_speed * push_factor
+	var target_speed := player_speed * factor
 	var current_along := velocity.dot(direction)
 	if current_along < target_speed:
 		velocity += direction * (target_speed - current_along)

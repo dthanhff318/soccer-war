@@ -25,7 +25,6 @@ signal stamina_changed(current: float, maximum: float, exhausted: bool)
 @export var kick_overhold_time: float = 0.5
 ## Speed of a pass (I key), aimed like a kick.
 @export var pass_strength: float = 250.0
-@export var kick_radius: float = 38.4
 ## Offline play: read the keyboard every physics tick. Online, the server
 ## room and the client Predictor call simulate() instead.
 @export var keyboard_control: bool = false
@@ -61,6 +60,14 @@ var display_name: String = ""
 var is_local: bool = false
 ## Keepers catch slow shots and spill hard ones softly (see Ball.keeper_touch).
 var is_goalkeeper: bool = false
+## Save stats used when is_goalkeeper (see Ball.keeper_rebound_speed).
+var catch_speed: float = Ball.KEEPER_CATCH_SPEED
+var rebound_min_ratio: float = Ball.KEEPER_MIN_RATIO
+var rebound_max_ratio: float = Ball.KEEPER_MAX_RATIO
+## How much faster than the player the ball leaves when run into (dribbling).
+var dribble_push: float = 1.2
+## Characters.ALL id this player was built from ("" for the default player).
+var character_id: String = ""
 ## Draw offset that hides small prediction corrections; decays to zero.
 var visual_offset: Vector2 = Vector2.ZERO
 var _regen_cooldown: float = 0.0
@@ -129,6 +136,19 @@ func simulate(bits: int, delta: float, replay: bool = false) -> void:
 		_try_pass()
 
 
+## Radius within which this player can kick or pass the ball.
+func reach() -> float:
+	return (_kick_area.get_node("Collision").shape as CircleShape2D).radius
+
+
+func set_reach(radius: float) -> void:
+	var collision: CollisionShape2D = _kick_area.get_node("Collision")
+	# The shape resource is shared by every player instance; give this one its own.
+	var shape: CircleShape2D = collision.shape.duplicate()
+	shape.radius = radius
+	collision.shape = shape
+
+
 ## Ball speed a kick released now would have.
 func kick_power() -> float:
 	return lerpf(min_kick_speed, max_kick_speed, clampf(kick_charge / kick_charge_time, 0.0, 1.0))
@@ -188,9 +208,9 @@ func _push_touched_balls(speed: float) -> void:
 		if ball:
 			# The normal points from the ball back toward the player.
 			if is_goalkeeper:
-				ball.keeper_touch(-collision.get_normal())
+				ball.keeper_touch(-collision.get_normal(), self)
 			else:
-				ball.push(-collision.get_normal(), speed)
+				ball.push(-collision.get_normal(), speed, dribble_push)
 
 
 ## True while a kick is charging (the power bar is showing).

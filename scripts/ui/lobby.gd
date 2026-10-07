@@ -21,6 +21,10 @@ func _ready() -> void:
 	Net.error_received.connect(_on_error)
 	Net.disconnected.connect(_on_disconnected)
 	_refresh(Net.current_room)
+	# "Match started" can arrive while the menu is still on screen and be
+	# missed; the room state already says so, so go straight to the match.
+	if Net.current_room.get("phase", Protocol.Phase.LOBBY) != Protocol.Phase.LOBBY:
+		_on_match_started.call_deferred()
 
 
 func _build_ui() -> void:

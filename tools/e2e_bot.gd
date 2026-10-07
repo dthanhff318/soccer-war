@@ -46,8 +46,10 @@ func _run() -> void:
 			return _fail("no room code")
 		menu._code_edit.text = FileAccess.get_file_as_string(_code_file).to_lower()
 		menu._on_join_pressed()
-		if not await _wait(func(): return _scene_is(LOBBY), 300):
-			return _fail("lobby did not open: " + menu._status.text)
+		# The host may start the moment we join, so we can pass through the
+		# lobby without ever seeing it.
+		if not await _wait(func(): return _scene_is(LOBBY) or _scene_is(MATCH), 300):
+			return _fail("lobby did not open: " + (menu._status.text if is_instance_valid(menu) else "?"))
 
 	if not await _wait(func(): return _scene_is(MATCH), 600):
 		return _fail("match did not start")

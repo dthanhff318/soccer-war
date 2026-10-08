@@ -5,13 +5,12 @@ extends Control
 
 const MENU_SCENE := "res://scenes/menu.tscn"
 const MATCH_SCENE := "res://scenes/main.tscn"
-const COPY_FEEDBACK_SECONDS := 1.5
 
-var _code_label: Label
+## "<host>'s ROOM" heading.
+var _title_label: Label
 ## One name list per team, indexed by Roster.Team.
 var _team_lists: Array[VBoxContainer] = []
 var _start_button: Button
-var _copy_button: Button
 var _character_button: Button
 ## Match length toggles, in Protocol.MATCH_MINUTES order.
 var _duration_buttons: Array[Button] = []
@@ -35,19 +34,8 @@ func _ready() -> void:
 
 func _build_ui() -> void:
 	var column := UiKit.screen(self)
-	column.add_child(UiKit.label("ROOM CODE", 14, UiKit.MUTED))
-	_code_label = UiKit.title("", 64, UiKit.HIGHLIGHT)
-	column.add_child(_code_label)
-	var share_row := HBoxContainer.new()
-	share_row.alignment = BoxContainer.ALIGNMENT_CENTER
-	share_row.add_theme_constant_override("separation", 12)
-	var share_hint := UiKit.label("Share this code with your friends", 14, UiKit.MUTED)
-	share_hint.autowrap_mode = TextServer.AUTOWRAP_OFF
-	share_row.add_child(share_hint)
-	_copy_button = UiKit.button("Copy", _on_copy_pressed, UiKit.Style.GHOST)
-	_copy_button.custom_minimum_size = Vector2(120, 36)
-	share_row.add_child(_copy_button)
-	column.add_child(share_row)
+	_title_label = UiKit.title("", 48, UiKit.HIGHLIGHT)
+	column.add_child(_title_label)
 
 	var teams := HBoxContainer.new()
 	teams.alignment = BoxContainer.ALIGNMENT_CENTER
@@ -104,7 +92,11 @@ func _build_ui() -> void:
 func _refresh(state: Dictionary) -> void:
 	if state.is_empty():
 		return
-	_code_label.text = state.code
+	var host_name := ""
+	for member in state.players:
+		if member.id == state.host_id:
+			host_name = member.name
+	_title_label.text = ("%s's room" % host_name).to_upper()
 	for names in _team_lists:
 		for child in names.get_children():
 			names.remove_child(child)
@@ -161,14 +153,6 @@ func _on_character_picked(character_id: String) -> void:
 
 func _on_duration_pressed(minutes: int) -> void:
 	Net.request_duration.rpc_id(1, minutes)
-
-
-func _on_copy_pressed() -> void:
-	DisplayServer.clipboard_set(str(Net.current_room.get("code", "")))
-	_copy_button.text = "COPIED!"
-	await get_tree().create_timer(COPY_FEEDBACK_SECONDS).timeout
-	if is_instance_valid(_copy_button):
-		_copy_button.text = "COPY"
 
 
 func _on_team_pressed(team: int) -> void:

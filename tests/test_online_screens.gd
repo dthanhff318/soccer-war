@@ -106,3 +106,14 @@ func test_character_picker_dims_taken_and_keeper_options() -> void:
 	check(not picker.option("cannon").disabled, "my own pick")
 	Net.current_room = {}
 	lobby.queue_free()
+
+
+func test_lobby_is_titled_by_its_host_and_shows_no_code() -> void:
+	Net.current_room = _lobby_state("cannon", false)
+	var lobby: Control = LOBBY_SCENE.instantiate()
+	add_child(lobby)
+	await get_tree().process_frame
+	check_eq(lobby._title_label.text, "MINH'S ROOM", "host's room")
+	check(not lobby.get("_copy_button"), "no copy button")
+	Net.current_room = {}
+	lobby.queue_free()

@@ -232,22 +232,6 @@ func _build_help_modal() -> Control:
 		controls.add_child(what)
 	card.add_child(controls)
 
-	for section in [
-		["Rules", [
-			"Score in the other team's goal  -  own goals count for them.",
-			"Matches last 5 minutes. Most goals wins.",
-		]],
-		["Play online", [
-			"Create a room and share its 4-letter code.",
-			"Friends join, pick Blue or Red, then the host presses Start.",
-		]],
-	]:
-		card.add_child(UiKit.caption(section[0]))
-		for line in section[1]:
-			var bullet := UiKit.label("•  " + line, 16)
-			bullet.horizontal_alignment = HORIZONTAL_ALIGNMENT_LEFT
-			card.add_child(bullet)
-
 	_help_close_button = UiKit.button("Got it", _hide_help, UiKit.Style.PRIMARY)
 	card.add_child(_help_close_button)
 	modal.hide()

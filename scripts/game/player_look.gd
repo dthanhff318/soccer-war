@@ -2,13 +2,12 @@ class_name PlayerLook
 extends Node2D
 
 ## A top-down footballer drawn in code, used when the player has no image:
-## shirt in the team colour (keepers wear their own with gloves), arms, head
+## shirt in the team colour (each team's keeper has its own, plus gloves), arms, head
 ## with hair at the back, and boots that stride while running. It faces the
 ## way it moves, worked out from its own on-screen movement, so it also
 ## turns correctly for players driven by network snapshots.
 
 const OUTLINE := Color(0.05, 0.05, 0.08)
-const KEEPER_SHIRT := Color(0.2, 0.8, 0.35)
 const GLOVES := Color(0.97, 0.97, 0.95)
 const BOOTS := Color(0.12, 0.12, 0.14)
 const SHADOW := Color(0, 0, 0, 0.28)
@@ -67,7 +66,7 @@ func _sync_with_player() -> void:
 	if player == null:
 		return
 	gloves = player.is_goalkeeper
-	shirt_color = KEEPER_SHIRT if player.is_goalkeeper else Teams.color_of(player.team)
+	shirt_color = Teams.keeper_color_of(player.team) if player.is_goalkeeper else Teams.color_of(player.team)
 	var seed_value := absi(hash(player.display_name))
 	skin = SKIN_TONES[seed_value % SKIN_TONES.size()]
 	hair = HAIR_COLORS[(seed_value / SKIN_TONES.size()) % HAIR_COLORS.size()]

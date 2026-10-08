@@ -8,12 +8,14 @@ const STYLES: Array[Dictionary] = [
 	{
 		"name": "BLUE",
 		"color": Color(0.2, 0.35, 1.0),
+		"keeper_color": Color(1.0, 0.82, 0.2),
 		# null: drawn in code. Put a texture here to use an image instead.
 		"sprite": null,
 	},
 	{
 		"name": "RED",
 		"color": Color(0.95, 0.25, 0.25),
+		"keeper_color": Color(0.2, 0.8, 0.35),
 		"sprite": null,
 	},
 ]
@@ -25,6 +27,11 @@ static func name_of(team: int) -> String:
 
 static func color_of(team: int) -> Color:
 	return STYLES[team].color
+
+
+## Shirt of the team's goalkeeper, different from every outfield shirt.
+static func keeper_color_of(team: int) -> Color:
+	return STYLES[team].keeper_color
 
 
 ## The team's player image, or null to draw players in code (PlayerLook).

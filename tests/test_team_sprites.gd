@@ -89,3 +89,20 @@ func test_players_are_drawn_and_collide_at_0_8_of_the_old_size() -> void:
 	check_near(body.radius, Player.BODY_RADIUS, 0.01, "collision matches the drawing")
 	player.queue_free()
 	await get_tree().process_frame
+
+
+func test_each_team_keeper_has_its_own_shirt() -> void:
+	var blue_keeper := _make(Roster.Team.LEFT, null, true)
+	var red_keeper := _make(Roster.Team.RIGHT, null, true)
+	await get_tree().process_frame
+	var blue_shirt: Color = blue_keeper.get_node("Look").shirt_color
+	var red_shirt: Color = red_keeper.get_node("Look").shirt_color
+	check_eq(blue_shirt, Teams.keeper_color_of(Roster.Team.LEFT), "blue keeper shirt")
+	check_eq(red_shirt, Teams.keeper_color_of(Roster.Team.RIGHT), "red keeper shirt")
+	check(blue_shirt != red_shirt, "the two keepers differ")
+	for shirt in [blue_shirt, red_shirt]:
+		for team in [Roster.Team.LEFT, Roster.Team.RIGHT]:
+			check(shirt != Teams.color_of(team), "keeper shirt differs from outfield shirts")
+	blue_keeper.queue_free()
+	red_keeper.queue_free()
+	await get_tree().process_frame

@@ -83,7 +83,8 @@ func test_pass_that_hits_a_player_stops_dead() -> void:
 	check_eq(ball.velocity, Vector2.ZERO, "stopped")
 	check(not ball.is_pass, "no longer a pass")
 	var gap := receiver.position.x - ball.position.x
-	check(gap > 26.0 and gap < 30.0, "rests against the receiver (gap %.1f)" % gap)
+	var touching := Player.BODY_RADIUS + ball.radius
+	check(gap > touching - 1.0 and gap < touching + 3.0, "rests against the receiver (gap %.1f)" % gap)
 	var resting := ball.position
 	_step(ball, 30)
 	check_eq(ball.position, resting, "stays where it stopped")
@@ -125,8 +126,13 @@ func test_pass_off_a_wall_becomes_a_normal_ball() -> void:
 	_step(ball, 20)
 	check(not ball.is_pass, "wall ends the pass")
 	check(ball.velocity.x < 0.0, "bounced off the wall")
-	_step(ball, 40)
-	check(ball.velocity.x > 0.0, "then bounces off the player like any ball")
+	var bounced := false
+	for i in 60:
+		ball.step(DELTA)
+		if ball.velocity.x > 0.0:
+			bounced = true
+			break
+	check(bounced, "then bounces off the player like any ball")
 	_teardown()
 
 

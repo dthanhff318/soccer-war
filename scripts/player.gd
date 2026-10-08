@@ -40,13 +40,18 @@ signal stamina_changed(current: float, maximum: float, exhausted: bool)
 ## Once drained to zero, sprinting stays locked until stamina reaches this.
 @export var exhausted_recover_at: float = 30.0
 
-const RING_RADIUS := 18.0
+## Overall size of a player relative to the original design; the body,
+## ring and sprite below all follow it.
+const SIZE_SCALE := 0.8
+## Collision radius; must match the CircleShape2D in player.tscn.
+const BODY_RADIUS := 16.0 * SIZE_SCALE
+const RING_RADIUS := 18.0 * SIZE_SCALE
 const NAME_FONT_SIZE := 17
 ## How quickly a smoothed prediction correction fades, per second.
 const OFFSET_DECAY := 15.0
 const POWER_BAR_SIZE := Vector2(36, 5)
 ## On-screen size of the shirt sprite, whatever the resolution of its image.
-const SPRITE_SIZE := 33.0
+const SPRITE_SIZE := 33.0 * SIZE_SCALE
 ## Gap between the rings and the power bar above / the name below.
 const LABEL_GAP := 3.0
 const KEEPER_RING_COLOR := Color(1.0, 0.8, 0.25)

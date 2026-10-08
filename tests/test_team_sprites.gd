@@ -42,3 +42,15 @@ func test_power_bar_sits_above_the_player_and_name_below() -> void:
 	check(name_top < half + 20.0, "name close to the feet")
 	player.queue_free()
 	await get_tree().process_frame
+
+
+func test_players_are_drawn_and_collide_at_0_8_of_the_old_size() -> void:
+	check_near(Player.SPRITE_SIZE, 33.0 * 0.8, 0.01, "sprite")
+	check_near(Player.RING_RADIUS, 18.0 * 0.8, 0.01, "ring")
+	check_near(Player.BODY_RADIUS, 16.0 * 0.8, 0.01, "body")
+	var player: Player = PLAYER_SCENE.instantiate()
+	add_child(player)
+	var body: CircleShape2D = player.get_node("Collision").shape
+	check_near(body.radius, Player.BODY_RADIUS, 0.01, "collision matches the drawing")
+	player.queue_free()
+	await get_tree().process_frame

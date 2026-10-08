@@ -8,7 +8,7 @@ extends RefCounted
 ## Distance in front of the goal line the keeper stands.
 const LINE_OFFSET := 24.0
 ## Furthest the keeper moves from the centre line (inside the goal area).
-const MAX_OFFSET := MatchRules.GOAL_AREA.y / 2.0 - 16.0
+const MAX_OFFSET := MatchRules.GOAL_AREA.y / 2.0 - Player.BODY_RADIUS
 ## Close enough: no input, so the keeper doesn't jitter around its target.
 const DEADZONE := 4.0
 

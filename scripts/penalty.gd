@@ -15,7 +15,7 @@ const KEEPER_ALLOWED_BITS := Protocol.IN_UP | Protocol.IN_DOWN | Protocol.IN_SPR
 ## Ball slower than this after the touch counts as stopped.
 const STOPPED_SPEED := 5.0
 ## Keeper "touched" the ball when this close (body + ball radius + a little).
-const KEEPER_TOUCH_DISTANCE := 16.0 + 11.2 + 3.0
+const KEEPER_TOUCH_DISTANCE := Player.BODY_RADIUS + 11.2 + 3.0
 const DOT_SIZE := 14
 
 @export var countdown_seconds: float = 3.0

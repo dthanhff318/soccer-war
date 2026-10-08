@@ -9,7 +9,7 @@ const REGULAR_KICKS := 5
 ## Keeper stands just in front of the right goal line, between the posts.
 const KEEPER_X := MatchRules.GOAL_LINE_RIGHT - 18.0
 const KEEPER_Y_RANGE := Vector2(
-	MatchRules.GOAL_MOUTH_TOP + 16.0, MatchRules.GOAL_MOUTH_BOTTOM - 16.0)
+	MatchRules.GOAL_MOUTH_TOP + Player.BODY_RADIUS, MatchRules.GOAL_MOUTH_BOTTOM - Player.BODY_RADIUS)
 ## Shooter starts this far behind the ball, straight in line with the goal.
 const SHOOTER_BACK_OFF := 40.0
 

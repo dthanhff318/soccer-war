@@ -8,12 +8,13 @@ const STYLES: Array[Dictionary] = [
 	{
 		"name": "BLUE",
 		"color": Color(0.2, 0.35, 1.0),
-		"sprite": preload("res://assets/field/player/18.png"),
+		# null: drawn in code. Put a texture here to use an image instead.
+		"sprite": null,
 	},
 	{
 		"name": "RED",
 		"color": Color(0.95, 0.25, 0.25),
-		"sprite": preload("res://assets/field/player/6.png"),
+		"sprite": null,
 	},
 ]
 
@@ -26,5 +27,6 @@ static func color_of(team: int) -> Color:
 	return STYLES[team].color
 
 
+## The team's player image, or null to draw players in code (PlayerLook).
 static func sprite_of(team: int) -> Texture2D:
 	return STYLES[team].sprite

@@ -87,25 +87,40 @@ var _kick_cancelled: bool = false
 ## Last non-zero movement direction, used to aim kicks while standing still.
 var _facing: Vector2 = Vector2.RIGHT
 
+## Image to draw this player with, set before adding it to the tree. When
+## null the team's image (Teams.sprite_of) is used, and when that is null too
+## the player is drawn in code by a PlayerLook.
+var sprite_texture: Texture2D = null
+
 @onready var _kick_area: Area2D = $KickArea
 @onready var _sprite: Sprite2D = $Sprite
+## The node that shows the player: the Sprite or the drawn PlayerLook.
+var _visual: Node2D
 
 
 func _ready() -> void:
 	stamina = max_stamina
-	var texture := Teams.sprite_of(team)
-	_sprite.texture = texture
-	# Team images come in different resolutions; draw them all the same size.
-	_sprite.scale = Vector2.ONE * SPRITE_SIZE / maxf(texture.get_width(), texture.get_height())
+	var texture: Texture2D = sprite_texture if sprite_texture else Teams.sprite_of(team)
+	if texture:
+		_sprite.texture = texture
+		# Images come in different resolutions; draw them all the same size.
+		_sprite.scale = Vector2.ONE * SPRITE_SIZE / maxf(texture.get_width(), texture.get_height())
+		_visual = _sprite
+	else:
+		_sprite.hide()
+		var look := PlayerLook.new()
+		look.name = "Look"
+		add_child(look)
+		_visual = look
 
 
 func _process(delta: float) -> void:
-	if visual_offset == Vector2.ZERO and _sprite.position == Vector2.ZERO:
+	if visual_offset == Vector2.ZERO and _visual.position == Vector2.ZERO:
 		return
 	visual_offset = visual_offset.lerp(Vector2.ZERO, minf(OFFSET_DECAY * delta, 1.0))
 	if visual_offset.length() < 0.1:
 		visual_offset = Vector2.ZERO
-	_sprite.position = visual_offset
+	_visual.position = visual_offset
 	queue_redraw()
 
 

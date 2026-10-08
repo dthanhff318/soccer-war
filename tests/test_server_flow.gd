@@ -142,6 +142,9 @@ func test_host_leaving_mid_match_passes_host_and_removes_body() -> void:
 	guest.request_join.rpc_id(1, host.current_room.code, "Bob")
 	third.request_join.rpc_id(1, host.current_room.code, "Cid")
 	check(await wait_until(func(): return host.current_room.get("players", []).size() == 3), "three joined")
+	# Host and third player share a team, so it needs a keeper.
+	host.request_character.rpc_id(1, "cat")
+	check(await wait_until(func(): return _member(host, host.my_id()).get("character") == "cat"), "host in goal")
 
 	var snaps: Array[Dictionary] = []
 	guest.snapshot_received.connect(func(snap): snaps.append(snap))
@@ -202,4 +205,77 @@ func test_silent_client_is_disconnected() -> void:
 	check(await wait_until(func(): return not dropped.is_empty(), 600), "silent guest disconnected")
 	check(await wait_until(func(): return host.current_room.players.size() == 1), "guest removed from room")
 	check(host.is_online(), "pinging host stays connected")
+	await _teardown()
+
+
+
+func _member(net: Node, id: int) -> Dictionary:
+	for member in net.current_room.get("players", []):
+		if member.id == id:
+			return member
+	return {}
+
+
+func test_room_list_updates_and_the_server_holds_five_rooms() -> void:
+	_start_server()
+	var browser := _make_client("Browser")
+	var hosts: Array = []
+	for i in Protocol.MAX_ROOMS + 1:
+		hosts.append(_make_client("Host%d" % i))
+	check(await wait_until(func(): return browser.is_online() and hosts.all(func(h): return h.is_online())), "connect")
+	browser.request_room_list.rpc_id(1)
+	check(await wait_until(func(): return browser.room_list_received_once), "initial list")
+	check_eq(browser.room_list.size(), 0, "no rooms yet")
+	hosts[0].request_create.rpc_id(1, "Alice")
+	check(await wait_until(func(): return browser.room_list.size() == 1), "pushed after a create")
+	var row: Dictionary = browser.room_list[0]
+	check_eq(row.host_name, "Alice", "host name")
+	check_eq(row.players, 1, "players")
+	check_eq(row.max_players, Roster.MAX_PER_TEAM * 2, "capacity")
+	check_eq(row.minutes, 5, "default length")
+	check_eq(row.phase, Protocol.Phase.LOBBY, "waiting")
+	for i in range(1, Protocol.MAX_ROOMS):
+		hosts[i].request_create.rpc_id(1, "H%d" % i)
+	check(await wait_until(func(): return browser.room_list.size() == Protocol.MAX_ROOMS), "five rooms")
+	var errors: Array[String] = []
+	hosts[Protocol.MAX_ROOMS].error_received.connect(func(m): errors.append(m))
+	hosts[Protocol.MAX_ROOMS].request_create.rpc_id(1, "Late")
+	check(await wait_until(func(): return not errors.is_empty()), "sixth refused")
+	check_eq(errors.front() if not errors.is_empty() else "", "Server is full", "message")
+	check_eq(_server.room_count(), Protocol.MAX_ROOMS, "still five")
+	hosts[0].leave()
+	check(await wait_until(func(): return browser.room_list.size() == Protocol.MAX_ROOMS - 1), "pushed after a room closes")
+	await _teardown()
+
+
+func test_characters_and_match_length_reach_the_match() -> void:
+	_start_server()
+	var host := _make_client("ClientA")
+	var guest := _make_client("ClientB")
+	check(await wait_until(func(): return host.is_online() and guest.is_online()), "connect")
+	host.request_create.rpc_id(1, "Alice")
+	check(await wait_until(func(): return host.current_room.has("code")), "room")
+	guest.request_join.rpc_id(1, host.current_room.code, "Bob")
+	check(await wait_until(func(): return host.current_room.get("players", []).size() == 2), "joined")
+
+	var guest_errors: Array[String] = []
+	guest.error_received.connect(func(m): guest_errors.append(m))
+	guest.request_duration.rpc_id(1, 10)
+	check(await wait_until(func(): return not guest_errors.is_empty()), "guest can't set the length")
+	check_eq(guest_errors.back() if not guest_errors.is_empty() else "", "Only the host can change the match length", "message")
+	host.request_duration.rpc_id(1, 6)
+	host.request_duration.rpc_id(1, 7)
+	check(await wait_until(func(): return host.current_room.get("minutes") == 7), "host sets 7 minutes (6 ignored)")
+
+	guest.request_character.rpc_id(1, "cannon")
+	check(await wait_until(func(): return _member(host, guest.my_id()).get("character") == "cannon"), "guest picks CANNON")
+
+	var snaps: Array[Dictionary] = []
+	guest.snapshot_received.connect(func(snap): snaps.append(snap))
+	host.request_start.rpc_id(1)
+	check(await wait_until(func(): return snaps.size() >= 2), "match running")
+	check(snaps.back().time_left > 7 * 60 - 5 and snaps.back().time_left <= 7 * 60, "7-minute clock (%.0f)" % snaps.back().time_left)
+	var room: Room = _room()
+	var cannon: Player = room._players[guest.my_id()]
+	check(cannon.max_kick_speed > 720.0, "server applied CANNON's shooting")
 	await _teardown()

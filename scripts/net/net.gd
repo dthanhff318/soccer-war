@@ -15,6 +15,8 @@ signal match_started
 signal snapshot_received(snap: Dictionary)
 signal goal_scored(team: int)
 signal match_ended(score_left: int, score_right: int)
+## Rows of the room browser: { code, host_name, players, max_players, minutes, phase }.
+signal room_list_received(rooms: Array)
 
 const PING_INTERVAL := 1.0
 
@@ -23,6 +25,9 @@ var server: Node = null
 ## Latest lobby state from the server, kept across scene changes:
 ## { code, phase, host_id, players: [{ id, name, team }] }.
 var current_room: Dictionary = {}
+## Latest room browser rows (see room_list_received).
+var room_list: Array = []
+var room_list_received_once: bool = false
 ## Shown by the menu after an unexpected disconnect.
 var last_error: String = ""
 var player_name: String = ""
@@ -76,6 +81,8 @@ func join(url: String) -> Error:
 ## Closes the connection on purpose; `disconnected` is not emitted.
 func leave() -> void:
 	current_room = {}
+	room_list = []
+	room_list_received_once = false
 	_last_heard.clear()
 	if multiplayer.multiplayer_peer is WebSocketMultiplayerPeer:
 		multiplayer.multiplayer_peer.close()
@@ -190,6 +197,24 @@ func request_join(code: String, requested_name: String) -> void:
 
 
 @rpc("any_peer", "call_remote", "reliable")
+func request_room_list() -> void:
+	if server:
+		server.handle_room_list(_sender())
+
+
+@rpc("any_peer", "call_remote", "reliable")
+func request_character(character_id: String) -> void:
+	if server:
+		server.handle_character(_sender(), character_id)
+
+
+@rpc("any_peer", "call_remote", "reliable")
+func request_duration(minutes: int) -> void:
+	if server:
+		server.handle_duration(_sender(), minutes)
+
+
+@rpc("any_peer", "call_remote", "reliable")
 func request_team(team: int) -> void:
 	if server:
 		server.handle_team(_sender(), team)
@@ -225,6 +250,13 @@ func ping(sent_msec: int) -> void:
 func send_room_state(state: Dictionary) -> void:
 	current_room = state
 	room_state_received.emit(state)
+
+
+@rpc("authority", "call_remote", "reliable")
+func send_room_list(rooms: Array) -> void:
+	room_list = rooms
+	room_list_received_once = true
+	room_list_received.emit(rooms)
 
 
 @rpc("authority", "call_remote", "reliable")

@@ -29,7 +29,12 @@ var _help_close_button: Button
 var _settings_panel: SettingsPanel
 var _back_button: Button
 var _name_edit: LineEdit
-var _code_edit: LineEdit
+var _room_rows: VBoxContainer
+var _rooms_note: Label
+var _create_button: Button
+## Room rows currently shown, and whether a request is in flight.
+var _rows_shown: Array = []
+var _busy: bool = false
 var _status: Label
 ## Buttons disabled while a request is in flight.
 var _buttons: Array[Button] = []
@@ -47,6 +52,7 @@ func _ready() -> void:
 	Net.connection_failed.connect(_on_connection_failed)
 	Net.room_state_received.connect(_on_room_state)
 	Net.error_received.connect(_on_error)
+	Net.room_list_received.connect(_refresh_rooms)
 
 
 func _build_ui() -> void:
@@ -103,32 +109,88 @@ func _build_home() -> VBoxContainer:
 	return home
 
 
+## Name plus the live room list: join a waiting room or create one.
 func _build_online_panel(parent: Control) -> Control:
-	var card := UiKit.card(parent, 420)
+	var card := UiKit.card(parent, 560)
 	card.add_child(UiKit.caption("Your name"))
-	_name_edit = UiKit.line_edit("Enter a name", Roster.MAX_NAME_LENGTH)
+	_name_edit = UiKit.line_edit("Enter your name (required)", Roster.MAX_NAME_LENGTH)
+	_name_edit.text_changed.connect(func(_text: String) -> void: _update_online_buttons())
 	card.add_child(_name_edit)
-	_buttons.append(UiKit.button("Create room", _on_create_pressed, UiKit.Style.PRIMARY))
-	card.add_child(_buttons.back())
 
-	card.add_child(UiKit.divider("or join a room"))
-	var join_row := HBoxContainer.new()
-	join_row.add_theme_constant_override("separation", 10)
-	_code_edit = UiKit.line_edit("CODE", Protocol.CODE_LENGTH)
-	_code_edit.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	_code_edit.text_submitted.connect(func(_text: String) -> void: _on_join_pressed())
-	join_row.add_child(_code_edit)
-	var join := UiKit.button("Join", _on_join_pressed, UiKit.Style.DANGER)
-	join.custom_minimum_size.x = 140
-	_buttons.append(join)
-	join_row.add_child(join)
-	card.add_child(join_row)
+	card.add_child(UiKit.caption("Rooms"))
+	var scroll := ScrollContainer.new()
+	scroll.custom_minimum_size = Vector2(0, Protocol.MAX_ROOMS * 46)
+	scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
+	card.add_child(scroll)
+	_room_rows = VBoxContainer.new()
+	_room_rows.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	_room_rows.add_theme_constant_override("separation", 6)
+	scroll.add_child(_room_rows)
+	_rooms_note = UiKit.label("", 14, UiKit.MUTED)
+	card.add_child(_rooms_note)
 
+	var actions := HBoxContainer.new()
+	actions.add_theme_constant_override("separation", 10)
+	_create_button = UiKit.button("Create room", _on_create_pressed, UiKit.Style.PRIMARY)
+	_create_button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	actions.add_child(_create_button)
 	_back_button = UiKit.button("Back", _show_home, UiKit.Style.GHOST)
-	_buttons.append(_back_button)
-	card.add_child(_back_button)
+	_back_button.custom_minimum_size.x = 160
+	actions.add_child(_back_button)
+	card.add_child(actions)
 	# card() returns the column inside the panel; show/hide the panel itself.
 	return card.get_parent()
+
+
+## Rebuilds the room list. Rooms in a match or full are shown but can't be joined.
+func _refresh_rooms(rows: Array) -> void:
+	_rows_shown = rows
+	for row in _room_rows.get_children():
+		_room_rows.remove_child(row)
+		row.queue_free()
+	for room in rows:
+		var running: bool = room.phase != Protocol.Phase.LOBBY
+		var full: bool = room.players >= room.max_players
+		var row := HBoxContainer.new()
+		row.add_theme_constant_override("separation", 12)
+		var title := UiKit.label("%s's room" % room.host_name, 18)
+		title.horizontal_alignment = HORIZONTAL_ALIGNMENT_LEFT
+		title.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		title.autowrap_mode = TextServer.AUTOWRAP_OFF
+		row.add_child(title)
+		for text in ["%d/%d" % [room.players, room.max_players], "%d MIN" % room.minutes]:
+			var info := UiKit.label(text, 16, UiKit.MUTED)
+			info.autowrap_mode = TextServer.AUTOWRAP_OFF
+			row.add_child(info)
+		row.set_meta("joinable", not running and not full)
+		if running or full:
+			var state := UiKit.label("IN MATCH" if running else "FULL", 16, UiKit.MUTED)
+			state.custom_minimum_size.x = 110
+			state.autowrap_mode = TextServer.AUTOWRAP_OFF
+			row.add_child(state)
+			row.modulate.a = 0.5 if running else 0.75
+		else:
+			var join := UiKit.button("Join", _join_room.bind(room.code), UiKit.Style.DANGER)
+			join.custom_minimum_size = Vector2(110, 38)
+			row.add_child(join)
+			row.set_meta("join_button", join)
+		_room_rows.add_child(row)
+	if rows.size() >= Protocol.MAX_ROOMS:
+		_rooms_note.text = "Server is full (%d/%d rooms)" % [rows.size(), Protocol.MAX_ROOMS]
+	elif rows.is_empty():
+		_rooms_note.text = "No rooms yet - create one!" if Net.room_list_received_once else ""
+	else:
+		_rooms_note.text = ""
+	_update_online_buttons()
+
+
+## Join and Create need a name, no request in flight, and (Create) a free slot.
+func _update_online_buttons() -> void:
+	var has_name := not _name_edit.text.strip_edges().is_empty()
+	_create_button.disabled = _busy or not has_name or _rows_shown.size() >= Protocol.MAX_ROOMS
+	for row in _room_rows.get_children():
+		if row.has_meta("join_button"):
+			(row.get_meta("join_button") as Button).disabled = _busy or not has_name
 
 
 ## Dimmed full-screen overlay with the controls and rules. Closes with
@@ -249,7 +311,10 @@ func _show_online() -> void:
 	_home.hide()
 	_online_panel.show()
 	_status.text = ""
+	_refresh_rooms(Net.room_list)
 	_name_edit.grab_focus()
+	# Connect straight away so the room list can come in.
+	_send(func() -> void: Net.request_room_list.rpc_id(1), false)
 
 
 func _show_home() -> void:
@@ -268,11 +333,7 @@ func _on_create_pressed() -> void:
 	_send(func() -> void: Net.request_create.rpc_id(1, player_name))
 
 
-func _on_join_pressed() -> void:
-	var code := _code_edit.text.strip_edges().to_upper()
-	if code.length() != Protocol.CODE_LENGTH:
-		_status.text = "Enter the %d-character room code" % Protocol.CODE_LENGTH
-		return
+func _join_room(code: String) -> void:
 	var player_name := _remember_name()
 	_send(func() -> void: Net.request_join.rpc_id(1, code, player_name))
 
@@ -295,14 +356,16 @@ func _remember_name() -> String:
 	return Net.player_name
 
 
-## Sends `request` now if connected, otherwise connects first.
-func _send(request: Callable) -> void:
-	_set_busy(true)
+## Sends `request` now if connected, otherwise connects first. `blocking`
+## requests (join/create) disable the buttons until the server answers.
+func _send(request: Callable, blocking: bool = true) -> void:
+	if blocking:
+		_set_busy(true)
 	if Net.is_online():
 		request.call()
 		return
 	_pending_request = request
-	_status.text = "Connecting…"
+	_rooms_note.text = "Connecting…"
 	if Net.join(Net.server_url()) != OK:
 		_on_connection_failed()
 
@@ -316,6 +379,7 @@ func _on_connected() -> void:
 func _on_connection_failed() -> void:
 	_pending_request = Callable()
 	_set_busy(false)
+	_rooms_note.text = ""
 	_status.text = "Could not reach the server at %s" % Net.server_url()
 
 
@@ -329,8 +393,10 @@ func _on_error(message: String) -> void:
 
 
 func _set_busy(busy: bool) -> void:
+	_busy = busy
 	for button in _buttons:
 		button.disabled = busy
+	_update_online_buttons()
 
 
 func _change_scene(path: String) -> void:

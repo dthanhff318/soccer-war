@@ -77,8 +77,11 @@ tools/build-web.sh             # export the web build
 python3 serve.py               # http://127.0.0.1:8060
 ```
 
-Open several tabs: one clicks **Create room** and shares the 4-letter code, the
-others **Join** with it, pick a team, and the host presses **Start match**.
+Open several tabs and click **PLAY ONLINE**: enter a name, then **Create room**
+or **Join** one from the live room list (a server holds at most 5 rooms). In
+the lobby everyone picks a team and a **character** (no duplicates within a
+team; a team of two or more needs exactly one goalkeeper), the host picks the
+match length (5 / 7 / 10 minutes) and presses **Start match**.
 
 A page can target another server with `?server=wss://host.example.com`.
 

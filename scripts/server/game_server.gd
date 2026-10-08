@@ -40,8 +40,12 @@ func room_count() -> int:
 
 func handle_create(peer: int, player_name: String) -> void:
 	_leave(peer)
+	if _rooms.size() >= Protocol.MAX_ROOMS:
+		Net.send_error.rpc_id(peer, "Server is full")
+		return
 	var room := Room.new(Protocol.make_code(_rng, _rooms))
 	_rooms[room.code] = room
+	room.changed.connect(_broadcast_room_list)
 	add_child(room)
 	print("[server] room %s created by peer %d" % [room.code, peer])
 	_join(peer, room, player_name)
@@ -56,6 +60,41 @@ func handle_join(peer: int, code: String, player_name: String) -> void:
 		Net.send_error.rpc_id(peer, "Match already in progress")
 	else:
 		_join(peer, room, player_name)
+
+
+func handle_room_list(peer: int) -> void:
+	Net.send_room_list.rpc_id(peer, room_list())
+
+
+func handle_character(peer: int, character_id: String) -> void:
+	var room := _room_for(peer)
+	if room:
+		room.set_character(peer, character_id)
+
+
+func handle_duration(peer: int, minutes: int) -> void:
+	var room := _room_for(peer)
+	if room:
+		room.set_duration(peer, minutes)
+
+
+## One row per room for the room browser.
+func room_list() -> Array:
+	var rows: Array = []
+	for room: Room in _rooms.values():
+		rows.append(room.summary())
+	return rows
+
+
+## Sends the room list to everyone browsing (connected but not in a room).
+func _broadcast_room_list() -> void:
+	var browsing: Array[int] = []
+	for id in multiplayer.get_peers():
+		if not _room_of_peer.has(id):
+			browsing.append(id)
+	var rows := room_list()
+	for id in Net.open_peers(browsing):
+		Net.send_room_list.rpc_id(id, rows)
 
 
 func handle_team(peer: int, team: int) -> void:
@@ -86,6 +125,7 @@ func _join(peer: int, room: Room, player_name: String) -> void:
 		Net.send_error.rpc_id(peer, err)
 		return
 	_room_of_peer[peer] = room.code
+	_broadcast_room_list()
 
 
 func _leave(peer: int) -> void:
@@ -98,6 +138,7 @@ func _leave(peer: int) -> void:
 		_rooms.erase(room.code)
 		room.queue_free()
 		print("[server] room %s closed" % room.code)
+	_broadcast_room_list()
 
 
 func _room_for(peer: int) -> Room:

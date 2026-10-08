@@ -1,16 +1,20 @@
 class_name Roster
 extends RefCounted
 
-## Who is in a room: names, teams and the host, plus the room's membership
+## Who is in a room: names, teams, characters and the host, plus the room's
 ## rules. Methods that can be refused return an error message, or "".
+## Character rules: no two teammates share a character, and a team has at
+## most one goalkeeper (exactly one once it has two or more players).
 
 enum Team { LEFT, RIGHT }
 
 const MAX_PER_TEAM := 4
 const MAX_NAME_LENGTH := 12
+## Order in which free outfield characters are handed out.
+const DEFAULT_PICKS: Array[String] = ["captain", "blitz", "cannon", "maestro", "dynamo", "silk", "rocket", "sniper"]
 
 var host_id: int = 0
-## Members in join order: { id, name, team }.
+## Members in join order: { id, name, team, character }.
 var _members: Array[Dictionary] = []
 
 
@@ -26,7 +30,7 @@ func add(id: int, player_name: String) -> String:
 	if size() >= MAX_PER_TEAM * 2:
 		return "Room is full"
 	var team := Team.LEFT if count(Team.LEFT) <= count(Team.RIGHT) else Team.RIGHT
-	_members.append({"id": id, "name": clean_name(player_name), "team": team})
+	_members.append({"id": id, "name": clean_name(player_name), "team": team, "character": _free_outfielder(team)})
 	if host_id == 0:
 		host_id = id
 	return ""
@@ -53,14 +57,52 @@ func set_team(id: int, team: int) -> String:
 	if count(team) >= MAX_PER_TEAM:
 		return "Team is full"
 	member.team = team
+	# Keep the character only if the new team allows it.
+	var character: Dictionary = Characters.by_id(member.character)
+	if _taken_in_team(team, member.character, id) or (character.keeper and _team_keeper(team, id) != 0):
+		member.character = _free_outfielder(team, id)
 	return ""
+
+
+func set_character(id: int, character_id: String) -> String:
+	var member := _find(id)
+	if member.is_empty():
+		return "Not in this room"
+	var character := Characters.by_id(character_id)
+	if character.is_empty():
+		return "Unknown character"
+	if _taken_in_team(member.team, character_id, id):
+		return "Taken by a teammate"
+	if character.keeper and _team_keeper(member.team, id) != 0:
+		return "Your team already has a goalkeeper"
+	member.character = character_id
+	return ""
+
+
+func character_of(id: int) -> String:
+	return _find(id).get("character", "")
 
 
 func can_start(requester: int) -> String:
 	if requester != host_id:
 		return "Only the host can start the match"
-	if count(Team.LEFT) == 0 or count(Team.RIGHT) == 0:
+	return start_problem(_members)
+
+
+## Why a lobby with these members (dicts with team and character) can't
+## start yet, or "". Shared with the client to explain a disabled Start.
+static func start_problem(members: Array) -> String:
+	var players := [0, 0]
+	var keepers := [0, 0]
+	for member in members:
+		players[member.team] += 1
+		if Characters.by_id(member.get("character", "")).get("keeper", false):
+			keepers[member.team] += 1
+	if players[Team.LEFT] == 0 or players[Team.RIGHT] == 0:
 		return "Each team needs at least one player"
+	for team in [Team.LEFT, Team.RIGHT]:
+		if players[team] >= 2 and keepers[team] == 0:
+			return "%s needs a goalkeeper" % Teams.name_of(team)
 	return ""
 
 
@@ -103,6 +145,29 @@ func ids_in_team(team: int) -> Array[int]:
 ## Lobby state sent to clients.
 func to_dict() -> Dictionary:
 	return {"host_id": host_id, "players": _members.duplicate(true)}
+
+
+## True when someone in `team` other than `except_id` plays `character_id`.
+func _taken_in_team(team: int, character_id: String, except_id: int = 0) -> bool:
+	for member in _members:
+		if member.team == team and member.id != except_id and member.character == character_id:
+			return true
+	return false
+
+
+## Id of the keeper in `team` other than `except_id`, or 0.
+func _team_keeper(team: int, except_id: int = 0) -> int:
+	for member in _members:
+		if member.team == team and member.id != except_id and Characters.by_id(member.character).get("keeper", false):
+			return member.id
+	return 0
+
+
+func _free_outfielder(team: int, except_id: int = 0) -> String:
+	for character_id in DEFAULT_PICKS:
+		if not _taken_in_team(team, character_id, except_id):
+			return character_id
+	return DEFAULT_PICKS[0]
 
 
 func _find(id: int) -> Dictionary:

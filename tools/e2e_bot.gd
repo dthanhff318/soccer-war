@@ -34,18 +34,28 @@ func _run() -> void:
 	menu._name_edit.text = _role.capitalize()
 
 	if _role == "host":
+		menu._show_online()
 		menu._on_create_pressed()
 		if not await _wait(func(): return _scene_is(LOBBY), 300):
 			return _fail("lobby did not open: " + menu._status.text)
 		FileAccess.open(_code_file, FileAccess.WRITE).store_string(_net.current_room.code)
-		if not await _wait(func(): return _net.current_room.get("players", []).size() == 2, 1200):
-			return _fail("guest never joined")
+		current_scene._on_duration_pressed(7)
+		current_scene._on_character_picked("cannon")
+		var ready := func() -> bool: return _net.current_room.get("players", []).size() == 2 \
+				and _net.current_room.get("minutes") == 7
+		if not await _wait(ready, 1200):
+			return _fail("guest never joined (or length not set)")
 		current_scene._on_start_pressed()
 	else:
 		if not await _wait(func(): return FileAccess.file_exists(_code_file), 1200):
 			return _fail("no room code")
-		menu._code_edit.text = FileAccess.get_file_as_string(_code_file).to_lower()
-		menu._on_join_pressed()
+		var code := FileAccess.get_file_as_string(_code_file)
+		# Join from the room list, as a player would.
+		menu._show_online()
+		var listed := func() -> bool: return _net.room_list.any(func(room): return room.code == code)
+		if not await _wait(listed, 600):
+			return _fail("room never showed up in the list")
+		menu._join_room(code)
 		# The host may start the moment we join, so we can pass through the
 		# lobby without ever seeing it.
 		if not await _wait(func(): return _scene_is(LOBBY) or _scene_is(MATCH), 300):

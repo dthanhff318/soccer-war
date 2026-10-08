@@ -11,7 +11,12 @@ const BALL_SCENE := preload("res://scenes/ball.tscn")
 @warning_ignore("integer_division")
 const SNAPSHOT_EVERY := Protocol.TICK_RATE / Protocol.SNAPSHOT_RATE
 
+## Emitted whenever the lobby state changes (members, phase, settings).
+signal changed
+
 var code: String
+## Match length picked by the host.
+var minutes: int = Protocol.DEFAULT_MATCH_MINUTES
 var roster := Roster.new()
 var phase: int = Protocol.Phase.LOBBY
 ## Goals, indexed by Roster.Team.
@@ -71,6 +76,42 @@ func set_team(peer: int, team: int) -> void:
 		Net.send_error.rpc_id(peer, err)
 
 
+func set_character(peer: int, character_id: String) -> void:
+	var err := "Characters are locked during a match" if is_in_match() else roster.set_character(peer, character_id)
+	if err.is_empty():
+		_broadcast_room_state()
+	else:
+		Net.send_error.rpc_id(peer, err)
+
+
+func set_duration(peer: int, new_minutes: int) -> void:
+	var err := ""
+	if peer != roster.host_id:
+		err = "Only the host can change the match length"
+	elif is_in_match():
+		err = "The match has already started"
+	elif not Protocol.MATCH_MINUTES.has(new_minutes):
+		err = "Unknown match length"
+	if err.is_empty():
+		minutes = new_minutes
+		_broadcast_room_state()
+	else:
+		Net.send_error.rpc_id(peer, err)
+
+
+## Row for the room browser.
+func summary() -> Dictionary:
+	var members: Array = roster.to_dict().players
+	var host_name := ""
+	for member in members:
+		if member.id == roster.host_id:
+			host_name = member.name
+	return {
+		"code": code, "host_name": host_name, "players": roster.size(),
+		"max_players": Roster.MAX_PER_TEAM * 2, "minutes": minutes, "phase": phase,
+	}
+
+
 func start(peer: int) -> void:
 	if is_in_match():
 		return
@@ -88,7 +129,7 @@ func queue_input(peer: int, seq: int, bits: int) -> void:
 
 func _start_match() -> void:
 	score = [0, 0]
-	time_left = MatchRules.MATCH_SECONDS
+	time_left = minutes * 60.0
 	_tick = 0
 	_ball = BALL_SCENE.instantiate()
 	_ball.simulated = false
@@ -98,6 +139,7 @@ func _start_match() -> void:
 		player.name = "Player_%d" % id
 		player.team = roster.team_of(id)
 		add_child(player)
+		CharacterStats.apply(player, Characters.by_id(roster.character_of(id)))
 		_players[id] = player
 		_inputs[id] = InputQueue.new()
 	_kickoff()
@@ -176,9 +218,11 @@ func _return_to_lobby() -> void:
 
 
 func _broadcast_room_state() -> void:
+	changed.emit()
 	var state := roster.to_dict()
 	state.code = code
 	state.phase = phase
+	state.minutes = minutes
 	for id in Net.open_peers(roster.ids()):
 		Net.send_room_state.rpc_id(id, state)
 

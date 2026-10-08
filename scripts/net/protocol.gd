@@ -30,6 +30,12 @@ const INPUT_MASK := 127
 ## One-shot actions: never repeated or replayed.
 const IN_ONE_SHOT := IN_PASS
 
+## Rooms one server hosts at once.
+const MAX_ROOMS := 5
+## Match lengths the host can pick, in minutes.
+const MATCH_MINUTES: Array[int] = [5, 7, 10]
+const DEFAULT_MATCH_MINUTES := 5
+
 ## No 0/O or 1/I, so codes read unambiguously when shared aloud.
 const CODE_ALPHABET := "ABCDEFGHJKLMNPQRSTUVWXYZ23456789"
 const CODE_LENGTH := 4

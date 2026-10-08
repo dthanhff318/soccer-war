@@ -111,6 +111,8 @@ func _setup_online() -> void:
 		player.display_name = member.name
 		player.is_local = member.id == Net.my_id()
 		add_child(player)
+		# Same stats the server uses, so the local prediction matches it.
+		CharacterStats.apply(player, Characters.by_id(member.get("character", CharactersScreen.DEFAULT_CHARACTER)))
 		_players[member.id] = player
 		if player.is_local:
 			_local = player
